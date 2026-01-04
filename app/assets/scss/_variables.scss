@@ -1,0 +1,16 @@
+// assets/scss/_variables.scss
+$color-gold: #d4af37;
+$color-orange: #ff8c00;
+$color-night-blue: #0f172a;
+$color-deep-purple: #1e1b4b;
+$color-soft-amber: #fef3c7;
+$color-star: #fffde7;
+$glass-bg: rgba(30, 27, 75, 0.4);
+$color-deep-bg: #020617;
+
+@mixin glass-effect {
+    background: $glass-bg !important;
+    border: 1px solid rgba($color-gold, 0.2) !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(12px);
+}
