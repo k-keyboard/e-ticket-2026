@@ -52,7 +52,7 @@ const handleRegister = async () => {
     try {
         // ส่งข้อมูลไปยัง API invite.post.ts
         // body: form (ส่งก้อน reactive ไปได้เลยโดยไม่ต้องมี .value)
-        await $fetch('/api/auth/invite', {
+        await useApi().fetch('/api/auth/invite', {
             method: 'POST',
             body: form,
         })
