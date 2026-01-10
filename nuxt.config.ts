@@ -16,8 +16,8 @@ export default defineNuxtConfig({
     // เพิ่ม Modules ที่จำเป็น
     modules: [
         '@ant-design-vue/nuxt',
-        // อย่าลืมใส่บรรทัดนี้หลังจาก yarn add @pinia/nuxt นะครับ
         '@pinia/nuxt',
+        'pinia-plugin-persistedstate/nuxt',
         '@unlok-co/nuxt-stripe'
     ],
 
