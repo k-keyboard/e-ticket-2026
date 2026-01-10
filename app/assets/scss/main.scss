@@ -2,36 +2,36 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    min-height: calc(100dvh - (79px));
     background-color: #f0f2f5; // โทนสีเทาอ่อนสะอาดตา
     padding: 20px;
-  
+
     .auth-card {
-      width: 100%;
-      max-width: 400px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        width: 100%;
+        max-width: 400px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
-  
+
     .auth-header {
-      text-align: center;
-      margin-bottom: 32px;
-  
-      .brand-title {
-        font-size: 2rem;
-        color: #1890ff;
-        font-weight: 800;
-        margin-bottom: 8px;
-      }
-  
-      .auth-subtitle {
-        color: #8c8c8c;
-      }
+        text-align: center;
+        margin-bottom: 32px;
+
+        .brand-title {
+            font-size: 2rem;
+            color: #1890ff;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+            color: #8c8c8c;
+        }
     }
-  
+
     .auth-footer {
-      text-align: center;
-      margin-top: 16px;
-      color: #8c8c8c;
+        text-align: center;
+        margin-top: 16px;
+        color: #8c8c8c;
     }
-  }
+}
