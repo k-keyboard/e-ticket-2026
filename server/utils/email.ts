@@ -12,12 +12,13 @@ export const sendConfirmationEmail = async (order: {
 
     // 2. ตั้งค่า Transport โดยใช้ค่า SMTP ของคุณ
     const transporter = nodemailer.createTransport({
-        host: "mail.allkey-services.com",
-        port: 587,
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT),
         secure: false, // ใช้ false สำหรับ port 587 (TLS)
+
         auth: {
-            user: "e-ticket@allkey-services.com",
-            pass: "e-ticket2026",
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
         },
         tls: {
             // ป้องกันปัญหาเรื่อง Certificate ในบาง Server
@@ -67,7 +68,7 @@ export const sendConfirmationEmail = async (order: {
                 filename: 'ticket-qr.png',
                 content: qrCodeDataUrl.split("base64,")[1],
                 encoding: 'base64',
-                cid: 'ticket_qrcode' 
+                cid: 'ticket_qrcode'
             }
         ]
     });
