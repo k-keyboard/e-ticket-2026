@@ -1,231 +1,219 @@
 <script setup>
-    import { PlusOutlined, EditOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons-vue'
-    import { message, Modal } from 'ant-design-vue'
-    import dayjs from 'dayjs'
-    import customParseFormat from 'dayjs/plugin/customParseFormat'
-    
-    // เพิ่ม Plugin สำหรับการอ่าน Format เวลาแบบ 12-hour (AM/PM)
-    dayjs.extend(customParseFormat)
-    
-    definePageMeta({
-        layout: 'admin',
-    })
-    
-    // 1. ดึงข้อมูล Events จาก API
-    const { data: events, pending, refresh } = await useFetch('/api/events')
-    
-    // 2. สถานะสำหรับ Modal (Add/Edit)
-    const isModalOpen = ref(false)
-    const isEditing = ref(false)
-    const submitting = ref(false)
-    const formRef = ref(null)
-    
-    const formState = reactive({
+import { 
+    PlusOutlined, 
+    EditOutlined, 
+    DeleteOutlined, 
+    ClockCircleOutlined,
+    CalendarOutlined,
+    SyncOutlined
+} from '@ant-design/icons-vue'
+import { message, Modal } from 'ant-design-vue'
+import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
+
+// Plugin สำหรับ Format เวลา AM/PM
+dayjs.extend(customParseFormat)
+
+// 1. Setup Meta & Layout
+definePageMeta({ layout: 'admin' })
+useHead({ title: 'จัดการกำหนดการ | Lanna Admin' })
+
+// 2. Data Fetching
+const { data: events, pending, refresh } = await useFetch('/api/events')
+
+// 3. States สำหรับ Modal
+const isModalOpen = ref(false)
+const isEditing = ref(false)
+const submitting = ref(false)
+const formRef = ref(null)
+
+const formState = reactive({
+    id: null,
+    event_time: '',
+    title: '',
+    description: '',
+})
+
+// 4. Modal Handlers
+const openAddModal = () => {
+    isEditing.value = false
+    Object.assign(formState, {
         id: null,
-        event_time: '',
+        event_time: null,
         title: '',
         description: '',
     })
-    
-    // 3. ฟังก์ชันจัดการ Modal
-    const openAddModal = () => {
-        isEditing.value = false
-        Object.assign(formState, {
-            id: null,
-            event_time: null, // เริ่มต้นค่าว่างเพื่อให้ TimePicker แสดง Placeholder
-            title: '',
-            description: '',
-        })
-        isModalOpen.value = true
+    isModalOpen.value = true
+}
+
+const openEditModal = (record) => {
+    isEditing.value = true
+    Object.assign(formState, { ...record })
+    isModalOpen.value = true
+}
+
+// 5. Save Action
+const handleSave = async () => {
+    try {
+        await formRef.value.validate()
+        submitting.value = true
+
+        const method = isEditing.value ? 'PUT' : 'POST'
+        const url = isEditing.value ? `/api/events/${formState.id}` : '/api/events'
+
+        await $fetch(url, { method, body: formState })
+
+        message.success(`${isEditing.value ? 'Updated' : 'Created'} successfully`)
+        isModalOpen.value = false
+        refresh()
+    } catch (err) {
+        if (err.name !== 'ValidationError') message.error('Failed to save event')
+    } finally {
+        submitting.value = false
     }
-    
-    const openEditModal = (record) => {
-        isEditing.value = true
-        Object.assign(formState, { ...record })
-        isModalOpen.value = true
-    }
-    
-    // 4. บันทึกข้อมูล (Add/Update)
-    const handleSave = async () => {
-        try {
-            await formRef.value.validate()
-            submitting.value = true
-    
-            const method = isEditing.value ? 'PUT' : 'POST'
-            const url = isEditing.value ? `/api/events/${formState.id}` : '/api/events'
-    
-            await $fetch(url, {
-                method,
-                body: formState,
-            })
-    
-            message.success(`${isEditing.value ? 'Updated' : 'Created'} successfully`)
-            isModalOpen.value = false
-            refresh() // โหลดข้อมูลใหม่เพื่อให้ตารางเรียงลำดับใหม่ตามเวลา
-        } catch (err) {
-            if (err.name !== 'ValidationError') {
-                message.error('Failed to save event')
-            }
-        } finally {
-            submitting.value = false
-        }
-    }
-    
-    // 5. ลบข้อมูล
-    const handleDelete = (id) => {
-        Modal.confirm({
-            title: 'Are you sure you want to delete this event?',
-            content: 'This will remove the event from the schedule on the homepage.',
-            okText: 'Yes, Delete',
-            okType: 'danger',
-            onOk: async () => {
-                try {
-                    await $fetch(`/api/events/${id}`, { method: 'DELETE' })
-                    message.success('Deleted successfully')
-                    refresh()
-                } catch (err) {
-                    message.error('Delete failed')
-                }
-            },
-        })
-    }
-    
-    // กำหนดหัวตาราง (นำ Order ออก)
-    const columns = [
-        { 
-            title: 'Time', 
-            dataIndex: 'event_time', 
-            key: 'event_time', 
-            width: '160px',
-            // ฟังก์ชันเรียงลำดับเวลาในตาราง (Frontend)
-            // sorter: (a, b) => dayjs(a.event_time, 'hh:mm A').unix() - dayjs(b.event_time, 'hh:mm A').unix(),
-            defaultSortOrder: 'ascend',
+}
+
+// 6. Delete Action
+const handleDelete = (id) => {
+    Modal.confirm({
+        title: 'ยืนยันการลบกิจกรรม?',
+        content: 'กิจกรรมนี้จะถูกลบออกจากตารางกำหนดการบนหน้าเว็บไซต์',
+        okText: 'ลบข้อมูล',
+        okType: 'danger',
+        onOk: async () => {
+            try {
+                await $fetch(`/api/events/${id}`, { method: 'DELETE' })
+                message.success('Deleted successfully')
+                refresh()
+            } catch (err) { message.error('Delete failed') }
         },
-        { title: 'Event Title', dataIndex: 'title', key: 'title', width: '250px' },
-        { title: 'Description', dataIndex: 'description', key: 'description', ellipsis: true },
-        { title: 'Actions', key: 'action', width: '120px' },
-    ]
-    </script>
-    
-    <template>
-        <div class="admin-event-page">
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h1 class="text-2xl font-bold">Event Schedule Management</h1>
-                    <p class="text-gray-500">Add or edit activities. The list is automatically sorted by time.</p>
-                </div>
-                <a-button type="primary" size="large" @click="openAddModal">
-                    <template #icon><plus-outlined /></template>
-                    Add New Activity
-                </a-button>
+    })
+}
+
+// 7. Table Columns Config
+const columns = [
+    { title: 'เวลา', key: 'event_time', width: 150 },
+    { title: 'ชื่อกิจกรรม', dataIndex: 'title', key: 'title', width: 250 },
+    { title: 'รายละเอียด', dataIndex: 'description', key: 'description', ellipsis: true },
+    { title: 'จัดการ', key: 'action', width: 120, align: 'center' },
+]
+</script>
+
+<template>
+    <div style="padding: 24px">
+        <a-flex justify="space-between" align="center" style="margin-bottom: 24px">
+            <div>
+                <a-typography-title :level="2" style="margin: 0">
+                    <CalendarOutlined style="margin-right: 12px; color: #d4af37" /> จัดการกำหนดการ
+                </a-typography-title>
+                <a-typography-text type="secondary">แก้ไขกิจกรรมและเวลาแสดงผลในหน้าแรก (เรียงลำดับตามเวลาอัตโนมัติ)</a-typography-text>
             </div>
-    
-            <a-card :bordered="false" class="shadow-sm">
-                <a-table
-                    :columns="columns"
-                    :data-source="events"
-                    :loading="pending"
-                    :pagination="{ pageSize: 10 }"
-                    row-key="id"
-                >
-                    <template #bodyCell="{ column, record }">
-                        <template v-if="column.key === 'event_time'">
-                            <a-tag color="blue">
-                                <clock-circle-outlined /> {{ record.event_time }}
-                            </a-tag>
-                        </template>
-    
-                        <template v-else-if="column.key === 'action'">
-                            <div class="flex gap-2">
-                                <a-tooltip title="Edit">
-                                    <a-button size="small" @click="openEditModal(record)">
-                                        <template #icon><edit-outlined /></template>
-                                    </a-button>
-                                </a-tooltip>
-                                <a-tooltip title="Delete">
-                                    <a-button size="small" danger @click="handleDelete(record.id)">
-                                        <template #icon><delete-outlined /></template>
-                                    </a-button>
-                                </a-tooltip>
-                            </div>
-                        </template>
-                    </template>
-                </a-table>
-            </a-card>
-    
-            <a-modal
-                v-model:open="isModalOpen"
-                :title="isEditing ? 'Update Event Activity' : 'Add New Activity'"
-                @ok="handleSave"
-                :confirmLoading="submitting"
-                destroyOnClose
-                ok-text="Save"
+            <a-space>
+                <a-button @click="refresh" :loading="pending">
+                    <template #icon><SyncOutlined /></template>
+                </a-button>
+                <a-button type="primary" size="large" @click="openAddModal" class="gold-btn">
+                    <template #icon><PlusOutlined /></template> เพิ่มกิจกรรมใหม่
+                </a-button>
+            </a-space>
+        </a-flex>
+
+        <a-card :bordered="false" class="shadow-sm">
+            <a-table 
+                :columns="columns" 
+                :data-source="events" 
+                :loading="pending" 
+                row-key="id"
+                :pagination="{ pageSize: 10, showTotal: (total) => `ทั้งหมด ${total} รายการ` }"
             >
-                <a-form ref="formRef" :model="formState" layout="vertical" class="mt-4">
-                    <a-form-item
-                        label="Activity Time"
-                        name="event_time"
-                        :rules="[{ required: true, message: 'Please select a time' }]"
-                    >
-                        <a-time-picker
-                            v-model:value="formState.event_time"
-                            format="hh:mm A"
-                            value-format="hh:mm A"
-                            use12-hours
-                            placeholder="Select Time (AM/PM)"
-                            class="w-full"
-                        />
-                    </a-form-item>
-    
-                    <a-form-item
-                        label="Activity Title"
-                        name="title"
-                        :rules="[{ required: true, message: 'Please enter a title' }]"
-                    >
-                        <a-input v-model:value="formState.title" placeholder="e.g., Grand Ceremony Open" />
-                    </a-form-item>
-    
-                    <a-form-item label="Description" name="description">
-                        <a-textarea
-                            v-model:value="formState.description"
-                            :rows="4"
-                            placeholder="Brief details about this activity..."
-                        />
-                    </a-form-item>
-                </a-form>
-            </a-modal>
-        </div>
-    </template>
-    
-    <style scoped>
-    .admin-event-page {
-        padding: 24px;
-    }
-    .flex {
-        display: flex;
-    }
-    .justify-between {
-        justify-content: space-between;
-    }
-    .items-center {
-        align-items: center;
-    }
-    .mb-6 {
-        margin-bottom: 1.5rem;
-    }
-    .mt-4 {
-        margin-top: 1rem;
-    }
-    .gap-2 {
-        gap: 0.5rem;
-    }
-    .w-full {
-        width: 100%;
-    }
-    
-    /* ปรับแต่ง Table Header เล็กน้อย */
-    :deep(.ant-table-thead > tr > th) {
-        /* background-color: #fafafa; */
-        font-weight: 600;
-    }
-    </style>
+                <template #bodyCell="{ column, record }">
+                    <template v-if="column.key === 'event_time'">
+                        <a-tag color="blue" style="font-weight: 600">
+                            <ClockCircleOutlined style="margin-right: 4px" />
+                            {{ record.event_time }}
+                        </a-tag>
+                    </template>
+
+                    <template v-else-if="column.key === 'action'">
+                        <a-space>
+                            <a-tooltip title="แก้ไข">
+                                <a-button size="small" @click="openEditModal(record)">
+                                    <template #icon><EditOutlined /></template>
+                                </a-button>
+                            </a-tooltip>
+                            <a-tooltip title="ลบ">
+                                <a-button size="small" danger @click="handleDelete(record.id)">
+                                    <template #icon><DeleteOutlined /></template>
+                                </a-button>
+                            </a-tooltip>
+                        </a-space>
+                    </template>
+                </template>
+            </a-table>
+        </a-card>
+
+        <a-modal
+            v-model:open="isModalOpen"
+            :title="isEditing ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรมใหม่'"
+            @ok="handleSave"
+            :confirmLoading="submitting"
+            destroyOnClose
+            centered
+        >
+            <a-form ref="formRef" :model="formState" layout="vertical" style="margin-top: 20px">
+                <a-form-item
+                    label="เวลาจัดกิจกรรม"
+                    name="event_time"
+                    :rules="[{ required: true, message: 'กรุณาระบุเวลา' }]"
+                >
+                    <a-time-picker
+                        v-model:value="formState.event_time"
+                        format="hh:mm A"
+                        value-format="hh:mm A"
+                        use12-hours
+                        placeholder="เลือกเวลา (AM/PM)"
+                        style="width: 100%"
+                    />
+                </a-form-item>
+
+                <a-form-item
+                    label="ชื่อกิจกรรม"
+                    name="title"
+                    :rules="[{ required: true, message: 'กรุณาระบุชื่อกิจกรรม' }]"
+                >
+                    <a-input v-model:value="formState.title" placeholder="เช่น พิธีเปิดงานโคมล้านนา" />
+                </a-form-item>
+
+                <a-form-item label="รายละเอียดกิจกรรม" name="description">
+                    <a-textarea
+                        v-model:value="formState.description"
+                        :rows="4"
+                        placeholder="ระบุรายละเอียดคร่าวๆ ของกิจกรรมนี้..."
+                    />
+                </a-form-item>
+            </a-form>
+        </a-modal>
+    </div>
+</template>
+
+<style scoped>
+.shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border: 1px solid #f0f0f0;
+}
+
+.gold-btn {
+    background-color: #001529;
+    border: none;
+}
+
+.gold-btn:hover {
+    background-color: #d4af37 !important;
+    color: #001529 !important;
+}
+
+:deep(.ant-table-thead > tr > th) {
+    background-color: #fafafa;
+    font-weight: 700;
+}
+</style>

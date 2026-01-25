@@ -54,6 +54,7 @@ export default defineNuxtConfig({
     runtimeConfig: {
         public: {
             // ใช้ค่าจาก .env ถ้าไม่มีให้ใช้ localhost:3000 เป็นค่าเริ่มต้น
+            siteUrl: process.env.PUBLIC_SITE_URL || 'http://localhost:3000',
             apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000'
         }
     },

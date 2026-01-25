@@ -7,6 +7,8 @@ $color-soft-amber: #fef3c7;
 $color-star: #fffde7;
 $glass-bg: rgba(30, 27, 75, 0.4);
 $color-deep-bg: #020617;
+$color-active: #52c41a;
+$color-night: #001529;
 
 @mixin glass-effect {
     background: $glass-bg !important;

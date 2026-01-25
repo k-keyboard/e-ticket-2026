@@ -2,31 +2,63 @@
 import {
     EnvironmentOutlined,
     CalendarOutlined,
-    ClockCircleOutlined,
-    HistoryOutlined,
-    ScheduleOutlined,
-    IdcardOutlined,
-    PictureOutlined,
+    HistoryOutlined, // (เก็บไว้หากใช้ในอนาคต แต่ใน template นี้ไม่ได้เรียกใช้ชัดเจน ถ้าไม่ได้ใช้ลบเพิ่มได้ครับ)
     MailOutlined,
     PhoneOutlined,
     ArrowRightOutlined,
-    StarFilled,
     AppstoreOutlined,
-    CheckCircleOutlined, // เพิ่มสำหรับลิสต์สิทธิประโยชน์
-    GlobalOutlined, // เพิ่มสำหรับสถานที่
+    CheckCircleOutlined,
+    GlobalOutlined,
+    EyeOutlined, // เพิ่มตัวนี้เพราะใน template มีการเรียกใช้ <EyeOutlined /> ใน Gallery
 } from '@ant-design/icons-vue'
+import dayjs from 'dayjs'
 
-const {
-    data: galleryPhotos,
-    pending: galleryPending,
-    error: galleryError,
-} = await useFetch('/api/gallery', {
+// 1. Fetch Gallery
+const { data: galleryPhotos, pending: galleryPending } = await useFetch('/api/gallery', {
     query: { limit: 8 },
 })
 
+// 2. Fetch Articles (4 รายการล่าสุด)
+const { data: articles, pending: articlesPending } = await useFetch('/api/articles', {
+    query: { limit: 4, status: 'published' },
+})
+
+// 3. Fetch Events Schedule
 const { data: schedule, pending, error } = await useFetch('/api/events')
+
 if (error.value) {
     console.error('Fetch error:', error.value)
+}
+
+const isProcessing = ref(false)
+
+const authStore = useAuthStore()
+const { user } = storeToRefs(authStore)
+
+// ฟังก์ชันเรียก API ที่เราย้ายไปไว้ใน /api/stripe/checkout
+const handleCheckout = async (priceId) => {
+    if (isProcessing.value) return
+    isProcessing.value = true
+
+    try {
+        const response = await $fetch('/api/stripe/checkout', {
+            method: 'POST',
+            body: {
+                priceId: priceId,
+                // ส่ง Email ของ User ไปที่ API
+                email: user.value?.email,
+            },
+        })
+
+        if (response.url) {
+            window.location.href = response.url
+        }
+    } catch (error) {
+        message.error('ระบบขัดข้อง ไม่สามารถไปหน้าชำระเงินได้')
+        console.error(error)
+    } finally {
+        isProcessing.value = false
+    }
 }
 </script>
 
@@ -104,7 +136,7 @@ if (error.value) {
                                     <template #previewMask>
                                         <div class="custom-mask">
                                             <EyeOutlined />
-                                            <span class="ml-2">View Full Size</span>
+                                            <span style="margin-left: 8px">View Full Size</span>
                                         </div>
                                     </template>
                                 </a-image>
@@ -187,6 +219,21 @@ if (error.value) {
                             </div>
                         </div>
                     </div>
+
+                    <div class="checkout-action-area">
+                        <button
+                            class="lanna-checkout-btn"
+                            @click="handleCheckout('price_1StROIJZDAEYrAhla5l3SrSG')"
+                            :disabled="isProcessing"
+                        >
+                            <span class="btn-content" v-if="!isProcessing">
+                                <span class="btn-text">SECURE CHECKOUT</span>
+                                <ArrowRightOutlined class="btn-icon" />
+                            </span>
+                            <span class="btn-content" v-else> <LoadingOutlined /> PROCESSING... </span>
+                        </button>
+                        <div class="secure-badge"><LockOutlined /> Secured by Stripe</div>
+                    </div>
                 </div>
             </section>
 
@@ -218,33 +265,73 @@ if (error.value) {
 
                     <div class="map-wrapper">
                         <iframe
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d120677.89209536098!2d98.83549726216447!3d19.05565342080392!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30da3cc03e488d01%3A0x40346c550601330!2sBan%20Pao%2C%20Mae%20Taeng%20District%2C%20Chiang%20Mai!5e0!3m2!1sen!2sth!4v1700000000000!5m2!1sen!2sth"
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15086.123456789!2d98.9!3d19.1!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTnCsDA2JzAwLjAiTiA5OMKwNTQnMDAuMCJF!5e0!3m2!1sth!2sth!4v1234567890"
                             width="100%"
                             height="450"
                             style="border: 0"
                             allowfullscreen=""
                             loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                        >
-                        </iframe>
+                        ></iframe>
+                    </div>
+                </div>
+            </section>
+
+            <div class="lanna-divider"></div>
+
+            <section id="articles" class="section-v2">
+                <div class="container">
+                    <div class="section-header text-center flex-header" style="margin-bottom: 40px">
+                        <div>
+                            <span class="sub-label">INSIGHTS</span>
+                            <h2 class="title-v2">Lanna Chronicles</h2>
+                        </div>
+                        <NuxtLink to="/articles" class="view-all-link"> VIEW ALL <AppstoreOutlined /> </NuxtLink>
+                    </div>
+
+                    <div v-if="articlesPending" class="text-center py-10">
+                        <a-spin size="large" />
+                    </div>
+
+                    <div v-else class="article-grid">
+                        <a-row :gutter="[24, 24]">
+                            <a-col v-for="article in articles" :key="article.id" :xs="24" :sm="12" :lg="8">
+                                <NuxtLink :to="`/articles/${article.id}`" class="article-card-link">
+                                    <div class="article-modern-card">
+                                        <div class="card-image">
+                                            <img
+                                                :src="article.images?.[0]?.image_url || '/images/placeholder-lanna.jpg'"
+                                                :alt="article.title"
+                                            />
+                                            <div class="card-date">
+                                                <CalendarOutlined />
+                                                {{ dayjs(article.created_at).format('DD MMM YYYY') }}
+                                            </div>
+                                        </div>
+
+                                        <div class="card-content">
+                                            <div class="category-info"><ReadOutlined /> ARTICLE</div>
+                                            <h3 class="card-title">{{ article.title }}</h3>
+                                            <p class="card-excerpt">
+                                                {{
+                                                    article.meta_description ||
+                                                    'Explore the profound beauty and traditions of Lanna culture...'
+                                                }}
+                                            </p>
+                                            <div class="card-footer">
+                                                <span class="read-more">READ STORY</span>
+                                                <RightOutlined class="arrow-icon" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </NuxtLink>
+                            </a-col>
+                        </a-row>
                     </div>
                 </div>
             </section>
         </a-layout-content>
 
-        <footer class="footer-modern">
-            <div class="footer-grid">
-                <div class="brand-side">
-                    <h3>YI PENG FESTIVAL</h3>
-                    <p>Preserving Lanna culture for generations.</p>
-                </div>
-                <div class="contact-side">
-                    <p><MailOutlined /> hello@yipengfestival.com</p>
-                    <p><PhoneOutlined /> +66 (0) 53 123 4567</p>
-                </div>
-            </div>
-            <div class="footer-bottom">&copy; 2025 CHIANG MAI TOURISM. ALL RIGHTS RESERVED.</div>
-        </footer>
+        <footer class="footer-modern"></footer>
     </div>
 </template>
 
@@ -902,6 +989,286 @@ if (error.value) {
     .footer-grid {
         flex-direction: column;
         gap: 40px;
+    }
+}
+
+/* Article Section Custom Style */
+.article-grid {
+    padding: 0 20px;
+}
+
+.article-modern-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba($color-gold, 0.15);
+    border-radius: 20px;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+
+    &:hover {
+        border-color: $color-gold;
+        transform: translateY(-10px);
+        background: rgba($color-gold, 0.05);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        .card-image img {
+            transform: scale(1.1);
+        }
+        .arrow-icon {
+            transform: translateX(5px);
+        }
+    }
+
+    .card-image {
+        position: relative;
+        height: 240px;
+        overflow: hidden;
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+        .card-date {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba($color-night-blue, 0.8);
+            color: $color-gold;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba($color-gold, 0.2);
+        }
+    }
+
+    .card-content {
+        padding: 28px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+
+        .category-info {
+            color: $color-gold;
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-excerpt {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin-bottom: 25px;
+            flex-grow: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 20px;
+            border-top: 1px solid rgba($color-gold, 0.1);
+            color: $color-gold;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 1.5px;
+            .arrow-icon {
+                transition: transform 0.3s ease;
+            }
+        }
+    }
+}
+
+.article-modern-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 24px rgba(212, 175, 55, 0.15); /* เงาสีทอง */
+}
+
+.article-image-wrapper {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.article-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.article-date-tag {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    backdrop-filter: blur(4px);
+}
+
+.article-title-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.article-excerpt {
+    font-size: 14px;
+    color: #666;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.6;
+}
+
+.article-card-link {
+    text-decoration: none;
+}
+
+/* ปรับ View All Link ให้เหมือน Gallery */
+.view-all-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #d4af37;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.view-all-link:hover {
+    color: #b8952d;
+}
+
+.ticket-artistic-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px; // ระยะห่างระหว่างตั๋วกับปุ่ม
+}
+
+.checkout-action-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.lanna-checkout-btn {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    height: 60px;
+    background: linear-gradient(135deg, #d4af37 0%, #f2d472 50%, #d4af37 100%);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+
+    .btn-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        color: $color-night-blue;
+        font-weight: 800;
+        font-size: 1.1rem;
+        letter-spacing: 2px;
+    }
+
+    .btn-icon {
+        transition: transform 0.3s ease;
+    }
+
+    &:hover:not(:disabled) {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(212, 175, 55, 0.5);
+        background: linear-gradient(135deg, #f2d472 0%, #ffffff 50%, #f2d472 100%);
+
+        .btn-icon {
+            transform: translateX(8px);
+        }
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        filter: grayscale(0.5);
+    }
+
+    // แสงเงาวิ่งผ่านปุ่ม (Shimmer Effect)
+    &::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transform: rotate(45deg);
+        animation: shimmer 3s infinite;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(100%) rotate(45deg);
+    }
+}
+
+.secure-badge {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 1px;
+}
+
+// Mobile Responsive
+@media (max-width: 576px) {
+    .lanna-checkout-btn {
+        max-width: 100%;
     }
 }
 </style>

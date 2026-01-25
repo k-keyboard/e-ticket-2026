@@ -1,37 +1,38 @@
-export const useAuthStore = defineStore('auth', () => {
-    // 1. State
-    const user = ref<{ email: string; role: string } | null>(null)
+import { defineStore } from 'pinia'
 
-    // 2. ใช้ useCookie ของ Nuxt โดยตรงเพื่อเก็บ Token
-    // ตั้งค่าให้ Token อยู่ได้ 7 วัน และเข้าถึงได้ทั่วทั้งไซต์
+export const useAuthStore = defineStore('auth', () => {
+    // 1. กำหนด Cookie สำหรับ User และ Token
+    const userCookie = useCookie<{ email: string; role: string } | null>('user_data', {
+        maxAge: 60 * 60 * 24 * 7,
+        path: '/'
+    })
     const tokenCookie = useCookie<string | null>('auth_token', {
         maxAge: 60 * 60 * 24 * 7,
         path: '/'
     })
 
-    const token = ref<string | null>(tokenCookie.value || null)
+    // 2. State: ใช้ค่าจาก Cookie มาตั้งต้น
+    const user = ref(userCookie.value || null)
+    const token = ref(tokenCookie.value || null)
 
-    // 3. Computed
+    // 3. Computed: ตรวจสอบสถานะการ Login
     const isLoggedIn = computed(() => !!token.value)
 
-    // 4. Actions
+    // 4. Actions: อัปเดตทั้ง State และ Cookie พร้อมกันเพื่อให้ UI เปลี่ยนทันที
     const setAuth = (userData: { email: string; role: string }, userToken: string) => {
         user.value = userData
         token.value = userToken
-        tokenCookie.value = userToken // บันทึกลง Cookie ทันที
+        
+        userCookie.value = userData
+        tokenCookie.value = userToken
     }
 
     const clearAuth = () => {
         user.value = null
         token.value = null
-        tokenCookie.value = null // ลบออกจาก Cookie
+        userCookie.value = null
+        tokenCookie.value = null
     }
 
     return { user, token, isLoggedIn, setAuth, clearAuth }
-}, {
-    // เก็บเฉพาะข้อมูล User ลงใน LocalStorage
-    persist: {
-        key: 'user_data',
-        pick: ['user'] // เลือกเก็บเฉพาะ user, ส่วน token เราจัดการแยกผ่าน Cookie แล้ว
-    }
 })

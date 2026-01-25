@@ -10,6 +10,7 @@ import {
     LogoutOutlined,
     MenuUnfoldOutlined,
     MenuFoldOutlined,
+    ProfileOutlined,
 } from '@ant-design/icons-vue'
 
 const collapsed = ref(false)
@@ -18,6 +19,7 @@ const selectedKeys = ref(['1'])
 const menuItems = [
     { key: '1', icon: DashboardOutlined, label: 'Dashboard', path: '/admin' },
     { key: '2', icon: IdcardOutlined, label: 'จัดการตั๋ว', path: '/admin/tickets' },
+    { key: '8', icon: ProfileOutlined, label: 'คำสั่งซื้อ', path: '/admin/orders' },
     { key: '3', icon: UserOutlined, label: 'จัดการผู้ใช้งาน', path: '/admin/users' },
     { key: '4', icon: ScheduleOutlined, label: 'จัดการกิจกรรม', path: '/admin/events' },
     { key: '5', icon: PictureOutlined, label: 'จัดการแกลอรี่', path: '/admin/gallery' },

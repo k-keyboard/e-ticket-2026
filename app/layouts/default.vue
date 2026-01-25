@@ -1,102 +1,127 @@
 <script setup>
-    import { UserOutlined, LogoutOutlined, AuditOutlined, DownOutlined, HomeOutlined } from '@ant-design/icons-vue'
-    
-    // เรียกใช้ Auth Store เพื่อเอาข้อมูลจริงมาแสดง
-    const authStore = useAuthStore()
-    
-    const handleLogout = () => {
-        authStore.clearAuth()
-        navigateTo('/login')
-    }
-    </script>
-    
-    <template>
-        <a-layout class="main-layout">
-            <a-layout-header class="custom-header">
-                <div class="header-content">
-                    <div class="logo-zone">
-                        <NuxtLink to="/" class="logo-link">
-                            <div class="brand-text">
-                                <span class="small-brand">CHIANG MAI</span>
-                                <span class="main-brand">YI PENG <span class="gold-accent">2025</span></span>
-                            </div>
-                        </NuxtLink>
-                    </div>
-    
-                    <div class="user-zone">
-                        <template v-if="authStore.isLoggedIn">
-                            <a-popover
-                                placement="bottom"
-                                trigger="click"
-                                overlayClassName="user-popover-wrapper"
-                                :arrow="false"
-                            >
-                                <template #content>
-                                    <div class="popover-inner">
-                                        <div class="user-profile-header">
-                                            <a-avatar class="large-avatar" :size="48">
-                                                <template #icon><UserOutlined /></template>
-                                            </a-avatar>
-                                            <div class="info">
-                                                <div class="name">{{ authStore.user?.email }}</div>
-                                                <div class="email">{{ authStore.user?.role }}</div>
-                                            </div>
+import { storeToRefs } from 'pinia' // นำเข้าตัวช่วย Reactivity
+import { 
+    UserOutlined, 
+    LogoutOutlined, 
+    AuditOutlined, 
+    DownOutlined, 
+    HomeOutlined 
+} from '@ant-design/icons-vue'
+
+const authStore = useAuthStore()
+
+// 1. ดึง State ออกมาแบบรักษา Reactivity
+// isLoggedIn และ user จะเปลี่ยนค่าตาม Store ทันทีที่ Login สำเร็จ
+const { isLoggedIn, user } = storeToRefs(authStore)
+
+// 2. ปรับ Computed ให้ใช้ค่าจาก user.value
+const userInitial = computed(() => {
+    return user.value?.email?.charAt(0).toUpperCase() || 'U'
+})
+
+// 3. แสดงชื่อเล่น (ก่อน @)
+const displayName = computed(() => {
+    return user.value?.email ? user.value.email.split('@')[0] : 'Guest'
+})
+
+const handleLogout = () => {
+    authStore.clearAuth()
+    navigateTo('/login')
+}
+</script>
+
+<template>
+    <a-layout class="main-layout">
+        <a-layout-header class="custom-header">
+            <div class="header-content">
+                <div class="logo-zone">
+                    <NuxtLink to="/" class="logo-link">
+                        <div class="brand-text">
+                            <span class="small-brand">CHIANG MAI</span>
+                            <span class="main-brand">YI PENG <span class="gold-accent">2026</span></span>
+                        </div>
+                    </NuxtLink>
+                </div>
+
+                <div class="user-zone">
+                    <template v-if="isLoggedIn">
+                        <a-popover
+                            placement="bottomRight"
+                            trigger="click"
+                            overlayClassName="user-popover-wrapper"
+                            :arrow="false"
+                        >
+                            <template #content>
+                                <div class="popover-inner">
+                                    <div class="user-profile-header">
+                                        <a-avatar class="large-avatar">{{ userInitial }}</a-avatar>
+                                        <div class="info">
+                                            <div class="name">Authenticated User</div>
+                                            <div class="email">{{ user?.email }}</div>
                                         </div>
-    
-                                        <div class="divider"></div>
-    
-                                        <nav class="popover-nav">
-                                            <NuxtLink to="/" class="nav-item">
-                                                <HomeOutlined /> <span>Home</span>
-                                            </NuxtLink>
-                                            <NuxtLink to="/my-tickets" class="nav-item">
-                                                <AuditOutlined /> <span>My Tickets</span>
-                                            </NuxtLink>
-                                        </nav>
-    
-                                        <div class="divider"></div>
-    
-                                        <button class="logout-action" @click="handleLogout">
-                                            <LogoutOutlined /> <span>Sign Out</span>
-                                        </button>
                                     </div>
-                                </template>
-    
-                                <div class="user-trigger">
-                                    <a-avatar class="user-avatar">
-                                        <template #icon><UserOutlined /></template>
-                                    </a-avatar>
-                                    <div class="user-info-text">
-                                        <span class="username">{{ authStore.user?.email }}</span>
-                                        <span class="user-role">{{ authStore.user?.role }}</span>
-                                    </div>
-                                    <DownOutlined class="icon-arrow" />
+
+                                    <div class="divider"></div>
+
+                                    <nav class="popover-nav">
+                                        <NuxtLink to="/" class="nav-item">
+                                            <HomeOutlined /> <span>Home</span>
+                                        </NuxtLink>
+                                        <NuxtLink to="/my-tickets" class="nav-item">
+                                            <AuditOutlined /> <span>My Tickets</span>
+                                        </NuxtLink>
+                                    </nav>
+
+                                    <div class="divider"></div>
+
+                                    <button class="logout-action" @click="handleLogout">
+                                        <LogoutOutlined /> <span>Sign Out</span>
+                                    </button>
                                 </div>
-                            </a-popover>
-                        </template>
-    
-                        <template v-else>
-                            <a-button type="primary" class="login-btn" @click="navigateTo('/login')"> SIGN IN </a-button>
-                        </template>
-                    </div>
+                            </template>
+
+                            <div class="user-trigger">
+                                <a-avatar class="user-avatar">
+                                    <template #icon>
+                                        <UserOutlined v-if="!user" />
+                                        <span v-else>{{ userInitial }}</span>
+                                    </template>
+                                </a-avatar>
+
+                                <div class="user-info-text">
+                                    <span class="username">{{ displayName }}</span>
+                                    <span class="user-role">{{ user?.role || 'Member' }}</span>
+                                </div>
+                                <DownOutlined class="icon-arrow" />
+                            </div>
+                        </a-popover>
+                    </template>
+
+                    <template v-else>
+                        <a-button type="primary" class="login-btn" @click="navigateTo('/login')"> 
+                            SIGN IN 
+                        </a-button>
+                    </template>
                 </div>
-            </a-layout-header>
-    
-            <a-layout-content class="main-content">
-                <div class="page-wrapper">
-                    <slot />
-                </div>
-            </a-layout-content>
-    
-            <a-layout-footer class="custom-footer">
-                <div class="footer-container">
-                    <div class="footer-line"></div>
-                    <p class="footer-text">CHIANG MAI HERITAGE &bull; YI PENG FESTIVAL E-TICKET SYSTEM</p>
-                    <p class="copyright">© 2025 Created with Passion by Your Name</p>
-                </div>
-            </a-layout-footer>
-        </a-layout>
-    </template>
+            </div>
+        </a-layout-header>
+
+        <a-layout-content class="main-content">
+            <div class="page-wrapper">
+                <slot />
+            </div>
+        </a-layout-content>
+
+        <a-layout-footer class="custom-footer">
+            <div class="footer-container">
+                <div class="footer-line"></div>
+                <p class="footer-text">CHIANG MAI HERITAGE &bull; YI PENG FESTIVAL E-TICKET SYSTEM</p>
+                <p class="copyright">© 2026 Created with Passion</p>
+            </div>
+        </a-layout-footer>
+    </a-layout>
+</template>
+
 <style lang="scss" scoped>
 .main-layout {
     min-height: 100vh;

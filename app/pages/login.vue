@@ -61,6 +61,11 @@ const loading = ref(false)
 const api = useApi()
 const authStore = useAuthStore()
 
+// กำหนดการใช้ Cookie สำหรับเก็บข้อมูล User และ Token
+// 'maxAge' ช่วยให้ข้อมูลคงอยู่ตามระยะเวลาที่กำหนด (เช่น 1 สัปดาห์)
+const userCookie = useCookie('user', { maxAge: 60 * 60 * 24 * 7, path: '/' })
+const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 * 7, path: '/' })
+
 const handleLogin = async () => {
     loading.value = true
     try {
@@ -72,15 +77,22 @@ const handleLogin = async () => {
             },
         })
 
-        // บันทึกข้อมูลลง Store (ซึ่งจะถูกบันทึกลง Cookie โดยอัตโนมัติ)
-        authStore.setAuth(response.user, response.token || 'dummy-session-token')
+        // 1. บันทึกลง Cookie โดยตรง (เพื่อให้ API ในหน้า my-ticket เรียกใช้ได้)
+        userCookie.value = response.user
+        tokenCookie.value = response.token || 'session-active'
 
-        message.success('Login successful! Redirecting...')
+        // 2. บันทึกลง Store เพื่อใช้ใน State ทั่วไปของ App
+        if (authStore.setAuth) {
+            authStore.setAuth(response.user, response.token)
+        }
+
+        message.success('Login successful! Welcome to Lanna Fest.')
 
         setTimeout(() => {
-            navigateTo('/')
-        }, 1000)
+            navigateTo('/my-tickets') // ส่งไปหน้าดูตั๋วทันที
+        }, 800)
     } catch (err) {
+        console.error('Login Error:', err)
         const errorMsg = err.data?.statusMessage || 'Invalid email or password'
         message.error(errorMsg)
     } finally {
