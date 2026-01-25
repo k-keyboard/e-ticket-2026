@@ -1,6 +1,6 @@
 <script setup>
 // ดึงข้อมูลสินค้าจาก API ที่เราสร้างไว้ใน server/api/products.get.ts
-const { data: products, pending, error } = await useFetch('/api/products')
+const { data: products, pending, error } = await useFetch('/api/stripe/products')
 
 const formatPrice = (priceObj) => {
     if (!priceObj) return 'N/A'

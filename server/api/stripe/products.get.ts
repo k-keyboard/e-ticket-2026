@@ -1,4 +1,4 @@
-// server/api/products.get.ts
+// server/api/stripe/products.get.ts
 import { useServerStripe } from '#stripe/server' // เปลี่ยนเป็น useServerStripe
 
 export default defineEventHandler(async (event) => {

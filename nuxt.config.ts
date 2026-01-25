@@ -18,10 +18,14 @@ export default defineNuxtConfig({
         '@ant-design-vue/nuxt',
         '@pinia/nuxt',
         'pinia-plugin-persistedstate/nuxt',
-        '@unlok-co/nuxt-stripe'
+        '@unlok-co/nuxt-stripe',
+        'nuxt-tiptap-editor',
     ],
 
-    // ตั้งค่าเพิ่มเติมสำหรับ Ant Design Vue (ถ้ามี)
+    tiptap: {
+        prefix: 'Tiptap', 
+    },
+
     antd: {
         // เช่น การตั้งค่า extractStyle: true สำหรับโปรเจกต์ขนาดใหญ่
     },

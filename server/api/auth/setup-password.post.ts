@@ -1,35 +1,42 @@
+import bcrypt from 'bcrypt'
+
 export default defineEventHandler(async (event) => {
   try {
-      // 1. อ่านข้อมูลจาก Body
-      const body = await readBody(event)
-      console.log('Received body:', body) // จะไปโผล่ใน passenger.log
+    const body = await readBody(event)
+    const { token, password } = body
 
-      const { token, password } = body
+    if (!token || !password) {
+      throw createError({ statusCode: 400, statusMessage: 'Missing token or password' })
+    }
 
-      if (!token || !password) {
-          throw createError({
-              statusCode: 400,
-              statusMessage: 'Missing token or password',
-          })
-      }
+    // 1. ค้นหา Email จาก Token
+    const [tokens]: any = await db.query(
+      'SELECT email FROM verification_tokens WHERE token = ? AND expires_at > NOW()',
+      [token]
+    )
 
-      // 2. ทดสอบการเชื่อมต่อ Database หรือ Logic อื่นๆ
-      // หากมีการใช้ DB ให้เช็คว่าไฟล์เชื่อมต่อ DB ของคุณใช้ค่าจาก process.env ถูกต้องไหม
-      
-      // ตัวอย่างการส่งค่ากลับ
-      return {
-          status: 'success',
-          message: 'Password setup completed'
-      }
+    if (!tokens || tokens.length === 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid or expired token' })
+    }
+
+    const email = tokens[0].email
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    // 2. อัปเดตข้อมูล (ใช้ชื่อ password_hash ตามรูป DB ของคุณ)
+    const [result]: any = await db.query(
+      'UPDATE users SET password_hash = ?, status = "active" WHERE email = ?',
+      [hashedPassword, email]
+    )
+
+    // 3. ลบ Token ทิ้ง
+    await db.query('DELETE FROM verification_tokens WHERE token = ?', [token])
+
+    return { status: 'success', message: 'Password setup completed' }
 
   } catch (error: any) {
-      // บันทึก Error ลง log ของ Server
-      console.error('API Error:', error)
-
-      // ส่งรายละเอียดกลับไปที่ Frontend (ช่วง Dev ให้ส่ง error.message ไปด้วยจะช่วยได้มาก)
-      throw createError({
-          statusCode: error.statusCode || 500,
-          statusMessage: error.message || 'Internal Server Error',
-      })
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Internal Server Error',
+    })
   }
 })

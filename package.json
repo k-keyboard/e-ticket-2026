@@ -11,13 +11,19 @@
   },
   "dependencies": {
     "@pinia/nuxt": "^0.11.3",
+    "@tiptap/extension-link": "^3.17.0",
+    "@tiptap/extension-placeholder": "^3.17.0",
+    "@tiptap/extension-underline": "^3.17.0",
+    "@tiptap/starter-kit": "^3.17.0",
     "@unlok-co/nuxt-stripe": "6.0.2",
     "ant-design-vue": "4.x",
     "bcrypt": "^6.0.0",
+    "crypto-random-string": "^5.0.0",
     "lucide-vue-next": "^0.562.0",
     "mysql2": "^3.16.0",
     "nodemailer": "^7.0.12",
     "nuxt": "^4.2.2",
+    "nuxt-tiptap-editor": "^3.2.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "vue": "^3.5.26",
@@ -26,6 +32,7 @@
   "devDependencies": {
     "@ant-design-vue/nuxt": "^1.4.6",
     "@types/bcrypt": "^6.0.0",
+    "@types/node": "^25.0.5",
     "@types/nodemailer": "^7.0.4",
     "sass-embedded": "^1.97.1"
   }

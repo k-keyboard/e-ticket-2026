@@ -16,31 +16,18 @@ import {
     GlobalOutlined, // เพิ่มสำหรับสถานที่
 } from '@ant-design/icons-vue'
 
-// 3. ปรับตารางกิจกรรมตามภาพ (เป็นภาษาอังกฤษ)
-const schedule = [
-    { time: '02:00 PM', title: 'Assembly', desc: 'Gathering at the meeting point and participant registration.' },
-    { time: '06:00 PM', title: 'Event Entry', desc: 'Check-in and receive badges or souvenirs at the main entrance.' },
-    { time: '06:30 PM', title: 'Festivity Begins', desc: 'Participate in various traditional Lanna activities.' },
-    { time: '07:30 PM', title: 'Dinner & Refreshments', desc: 'Enjoy local cuisine, snacks, desserts, and beverages.' },
-    {
-        time: '08:00 PM',
-        title: 'Grand Ceremony',
-        desc: 'Sacred rituals accompanied by spectacular Lanna performances.',
-    },
-    { time: '08:30 PM', title: 'Lantern Distribution', desc: 'Receive your Khom Loy and move to the launching area.' },
-    {
-        time: '08:50 PM',
-        title: 'Mass Lantern Release',
-        desc: 'Simultaneous lighting and release of lanterns into the sky.',
-    },
-    { time: '09:20 PM', title: 'Departure', desc: 'Safe return journey to the designated drop-off points.' },
-]
+const {
+    data: galleryPhotos,
+    pending: galleryPending,
+    error: galleryError,
+} = await useFetch('/api/gallery', {
+    query: { limit: 8 },
+})
 
-const galleryPhotos = Array.from({ length: 8 }).map((_, i) => ({
-    id: i + 1,
-    url: `https://picsum.photos/seed/${i + 50}/600/400`,
-    alt: `Yi Peng Moment ${i + 1}`,
-}))
+const { data: schedule, pending, error } = await useFetch('/api/events')
+if (error.value) {
+    console.error('Fetch error:', error.value)
+}
 </script>
 
 <template>
@@ -96,21 +83,37 @@ const galleryPhotos = Array.from({ length: 8 }).map((_, i) => ({
 
             <div class="lanna-divider"></div>
 
-            <section id="gallery" class="section-v2">
-                <div class="section-header flex-header">
-                    <div>
-                        <span class="sub-label">ATMOSPHERE</span>
-                        <h2 class="title-v2">Visual Journey</h2>
-                    </div>
-                    <NuxtLink to="/gallery" class="view-all-link"> VIEW ALL <AppstoreOutlined /> </NuxtLink>
-                </div>
-
-                <div class="gallery-premium-grid">
-                    <div v-for="img in galleryPhotos" :key="img.id" class="gallery-item">
-                        <img :src="img.url" :alt="img.alt" loading="lazy" />
-                        <div class="img-overlay">
-                            <PictureOutlined />
+            <section id="atmosphere" class="section-v2">
+                <div class="container">
+                    <div class="section-header text-center flex-header">
+                        <div>
+                            <span class="sub-label">ATMOSPHERE</span>
+                            <h2 class="title-v2">Event Gallery</h2>
                         </div>
+                        <NuxtLink to="/gallery" class="view-all-link"> VIEW ALL <AppstoreOutlined /> </NuxtLink>
+                    </div>
+
+                    <div v-if="galleryPending" class="text-center py-20">
+                        <a-spin size="large" tip="Loading Gallery..." />
+                    </div>
+
+                    <div v-else class="gallery-premium-grid">
+                        <a-image-preview-group>
+                            <div v-for="img in galleryPhotos" :key="img.id" class="gallery-item">
+                                <a-image :src="img.url" :alt="img.alt || 'Yi Peng Moment'" class="gallery-img-custom">
+                                    <template #previewMask>
+                                        <div class="custom-mask">
+                                            <EyeOutlined />
+                                            <span class="ml-2">View Full Size</span>
+                                        </div>
+                                    </template>
+                                </a-image>
+                            </div>
+                        </a-image-preview-group>
+                    </div>
+
+                    <div v-if="!galleryPending && galleryPhotos?.length === 0" class="text-center py-10">
+                        <a-empty description="No atmosphere photos yet." />
                     </div>
                 </div>
             </section>
@@ -122,13 +125,22 @@ const galleryPhotos = Array.from({ length: 8 }).map((_, i) => ({
                     <span class="sub-label">EVENT PROGRAM</span>
                     <h2 class="title-v2">Evening Itinerary</h2>
                 </div>
-                <div class="timeline-container">
+
+                <div v-if="pending" class="text-center">
+                    <a-spin size="large" />
+                </div>
+
+                <div v-else class="timeline-container">
                     <div v-for="(item, idx) in schedule" :key="idx" class="timeline-item">
-                        <div class="time-box">{{ item.time }}</div>
+                        <div class="time-box">{{ item.event_time }}</div>
                         <div class="event-content">
                             <h3>{{ item.title }}</h3>
-                            <p>{{ item.desc }}</p>
+                            <p>{{ item.description }}</p>
                         </div>
+                    </div>
+
+                    <div v-if="!schedule || schedule.length === 0" class="text-center">
+                        <p>Stay tuned! Schedule will be updated soon.</p>
                     </div>
                 </div>
             </section>
@@ -347,6 +359,11 @@ const galleryPhotos = Array.from({ length: 8 }).map((_, i) => ({
     gap: 15px;
     margin-top: 30px;
 
+    :deep(.ant-image) {
+        width: 100%;
+        height: 100%;
+    }
+
     .gallery-item {
         position: relative;
         aspect-ratio: 1/1;
@@ -355,35 +372,41 @@ const galleryPhotos = Array.from({ length: 8 }).map((_, i) => ({
         cursor: pointer;
         border: 1px solid rgba($color-gold, 0.2);
 
-        img {
+        :deep(.ant-image-img) {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+            display: block;
         }
 
-        .img-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        :deep(.ant-image-mask) {
             background: rgba($color-deep-purple, 0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
             color: $color-gold;
-            opacity: 0;
-            transition: 0.3s;
+            font-size: 1.2rem;
+            border-radius: 12px;
+            & .custom-mask {
+                display: grid;
+                gap: 8px;
+            }
+
+            .ant-image-mask-info {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                font-size: 1.2rem;
+
+                .anticon {
+                    font-size: 2.5rem;
+                }
+            }
         }
 
+        // เอฟเฟกต์ตอน Hover
         &:hover {
-            img {
+            :deep(.ant-image-img) {
                 transform: scale(1.1);
-            }
-            .img-overlay {
-                opacity: 1;
             }
         }
     }
@@ -667,8 +690,8 @@ const galleryPhotos = Array.from({ length: 8 }).map((_, i) => ({
         height: 100%;
         left: 0;
         top: 0;
-        background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(0, 0, 0, 0.2)), 
-        url('../assets//images/bg-ticket.png');
+        background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(0, 0, 0, 0.2)),
+            url('../assets//images/bg-ticket.png');
         background-position: center;
         background-size: cover;
         background-repeat: no-repeat;

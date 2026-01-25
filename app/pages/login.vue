@@ -78,7 +78,7 @@ const handleLogin = async () => {
         message.success('Login successful! Redirecting...')
 
         setTimeout(() => {
-            navigateTo('/dashboard')
+            navigateTo('/')
         }, 1000)
     } catch (err) {
         const errorMsg = err.data?.statusMessage || 'Invalid email or password'

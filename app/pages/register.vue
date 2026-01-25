@@ -7,14 +7,13 @@
             </div>
 
             <a-form :model="form" layout="vertical" @finish="handleRegister">
-                <a-form-item label="Account Type" name="role">
+                <!-- <a-form-item label="Account Type" name="role">
                     <a-select v-model:value="form.role" size="large">
                         <a-select-option value="traveler">Traveler</a-select-option>
                         <a-select-option value="staff">Staff Member</a-select-option>
                         <a-select-option value="owner">Owner</a-select-option>
                     </a-select>
-                </a-form-item>
-
+                </a-form-item> -->
                 <a-form-item
                     label="Email Address"
                     name="email"
