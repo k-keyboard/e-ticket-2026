@@ -74,6 +74,7 @@ export default defineNuxtConfig({
         workbox: {
             navigateFallback: '/',
             globPatterns: ['**/*.{js,css,html,png,svg,ico}'], // Cache ไฟล์พื้นฐาน
+            maximumFileSizeToCacheInBytes: 5242880,
         },
         devOptions: {
             enabled: true, // เปิดให้ทดสอบได้ในโบท dev (จะเห็น Service Worker ใน DevTools)
@@ -103,8 +104,8 @@ export default defineNuxtConfig({
 
     runtimeConfig: {
         public: {
-            siteUrl: process.env.PUBLIC_SITE_URL || 'http://localhost:3000',
-            apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000'
+            siteUrl: process.env.PUBLIC_SITE_URL,
+            apiBase: process.env.NUXT_PUBLIC_API_BASE
         }
     },
 
