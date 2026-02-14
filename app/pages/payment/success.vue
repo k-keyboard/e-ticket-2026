@@ -1,16 +1,25 @@
 <script setup>
-import { CheckCircleFilled, ArrowRightOutlined, DownloadOutlined, HomeOutlined } from '@ant-design/icons-vue'
+import { CheckCircleFilled, ArrowRightOutlined, HomeOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 
 const route = useRoute()
 const sessionId = route.query.session_id
 
-// 1. ดึงข้อมูลรายละเอียดการชำระเงินจาก Stripe Session (ถ้าต้องการ)
-// ในขั้นตอนนี้คุณอาจจะสร้าง API อีกตัวเพื่อไป get session detail จาก Stripe มาแสดงชื่อลูกค้าหรือราคาก็ได้
-const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-session`, {
+// 1. เรียก API เพื่อยืนยันการจ่ายเงิน, บันทึกลง DB, ลดสต็อก และส่งอีเมล (ทำที่ Backend ตัวเดียว)
+const {
+    data: sessionData,
+    pending,
+    error,
+} = await useFetch(`/api/stripe/retrieve-session`, {
     query: { session_id: sessionId },
     immediate: !!sessionId,
 })
 
+// คอนโซลดูเพื่อตรวจสอบค่าที่ส่งกลับมาจาก API
+watchEffect(() => {
+    if (sessionData.value) {
+        console.log('Payment Verified:', sessionData.value)
+    }
+})
 </script>
 
 <template>
@@ -19,7 +28,22 @@ const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-sess
 
         <div class="success-container">
             <div v-if="pending" class="loading-state">
-                <a-spin size="large" tip="Verifying your passage..." />
+                <a-spin size="large">
+                    <template #indicator><LoadingOutlined style="font-size: 48px; color: #d4af37" spin /></template>
+                </a-spin>
+                <p class="loading-text">Verifying your passage to Lanna...</p>
+            </div>
+
+            <div v-else-if="error || !sessionData?.success" class="error-card">
+                <a-result
+                    status="warning"
+                    title="Payment Verification Pending"
+                    sub-title="We are confirming your payment. If you don't receive an email within 5 minutes, please contact support."
+                >
+                    <template #extra>
+                        <NuxtLink to="/"><a-button key="console" type="primary">Back to Home</a-button></NuxtLink>
+                    </template>
+                </a-result>
             </div>
 
             <div v-else class="success-card">
@@ -32,7 +56,8 @@ const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-sess
                 <div class="text-section">
                     <h1 class="success-title">Payment <span class="gold-text">Successful</span></h1>
                     <p class="success-desc">
-                        Your celestial journey has been reserved. A confirmation email has been sent to your inbox.
+                        Your celestial journey has been reserved. <br />
+                        <strong>A confirmation email with your tickets has been sent to your inbox.</strong>
                     </p>
                 </div>
 
@@ -41,7 +66,11 @@ const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-sess
                 <div class="summary-box">
                     <div class="summary-item">
                         <span class="label">ORDER ID</span>
-                        <span class="value">#{{ sessionId?.slice(-8).toUpperCase() || 'N/A' }}</span>
+                        <span class="value">#{{ sessionData?.order_id }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">CUSTOMER</span>
+                        <span class="value">{{ sessionData?.customer_name }}</span>
                     </div>
                     <div class="summary-item">
                         <span class="label">STATUS</span>
@@ -50,24 +79,24 @@ const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-sess
                 </div>
 
                 <div class="action-buttons">
-                    <a-button type="primary" class="btn-download" block size="large">
-                        <DownloadOutlined /> DOWNLOAD E-TICKET
-                    </a-button>
+                    <NuxtLink to="/my-tickets" class="btn-main-link">
+                        <a-button type="primary" class="btn-download" block size="large">
+                            VIEW MY TICKETS <ArrowRightOutlined />
+                        </a-button>
+                    </NuxtLink>
 
                     <NuxtLink to="/" class="btn-home-link">
                         <a-button type="link" block> <HomeOutlined /> RETURN TO HOME </a-button>
                     </NuxtLink>
                 </div>
 
-                <p class="footer-note">Please present your E-Ticket QR Code at the entrance.</p>
+                <p class="footer-note">Please present your E-Ticket QR Code from "My Tickets" page at the entrance.</p>
             </div>
         </div>
     </div>
 </template>
 
 <style lang="scss" scoped>
-// ใช้ Global Variables: $color-gold, $color-night-blue
-
 .success-page {
     min-height: 100vh;
     background: radial-gradient(circle at center, $color-deep-purple 0%, $color-night-blue 100%);
@@ -84,6 +113,16 @@ const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-sess
     z-index: 10;
     max-width: 500px;
     width: 100%;
+}
+
+.loading-state {
+    text-align: center;
+    .loading-text {
+        color: $color-gold;
+        margin-top: 20px;
+        font-size: 1.1rem;
+        letter-spacing: 1px;
+    }
 }
 
 .success-card {
@@ -131,8 +170,8 @@ const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-sess
 }
 
 .success-title {
-    font-family: 'Playfair Display', serif;
     font-size: 2.2rem;
+    font-weight: 800;
     color: #fff;
     margin-bottom: 16px;
     .gold-text {
@@ -167,7 +206,6 @@ const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-sess
         .label {
             color: rgba(255, 255, 255, 0.4);
             font-size: 0.8rem;
-            letter-spacing: 1px;
         }
         .value {
             color: #fff;
@@ -187,20 +225,23 @@ const { data: sessionData, pending } = await useFetch(`/api/stripe/retrieve-sess
     display: flex;
     flex-direction: column;
     gap: 16px;
-
+    .btn-main-link {
+        text-decoration: none;
+    }
     .btn-download {
         background: $color-gold;
         border-color: $color-gold;
         color: $color-night-blue;
-        font-weight: 700;
-        height: 50px;
+        font-weight: 800;
+        height: 55px;
         border-radius: 12px;
+        font-size: 1rem;
         &:hover {
             background: #fff;
             border-color: #fff;
+            transform: translateY(-2px);
         }
     }
-
     .btn-home-link {
         text-decoration: none;
         .ant-btn {

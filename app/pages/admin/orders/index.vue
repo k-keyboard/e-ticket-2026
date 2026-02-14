@@ -135,7 +135,7 @@ const onSearch = (val) => {
                     </template>
 
                     <template v-else-if="column.key === 'action'">
-                        <a-tooltip title="ส่งอีเมลตั๋วซ้ำ">
+                        <a-tooltip title="ส่งตั๋วไปยังอีเมล">
                             <a-button 
                                 type="primary"
                                 shape="circle"

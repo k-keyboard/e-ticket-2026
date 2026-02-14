@@ -1,28 +1,12 @@
 <script setup>
-import { storeToRefs } from 'pinia' // นำเข้าตัวช่วย Reactivity
-import { 
-    UserOutlined, 
-    LogoutOutlined, 
-    AuditOutlined, 
-    DownOutlined, 
-    HomeOutlined 
-} from '@ant-design/icons-vue'
+import { storeToRefs } from 'pinia'
+import { UserOutlined, LogoutOutlined, AuditOutlined, DownOutlined, HomeOutlined } from '@ant-design/icons-vue'
 
 const authStore = useAuthStore()
-
-// 1. ดึง State ออกมาแบบรักษา Reactivity
-// isLoggedIn และ user จะเปลี่ยนค่าตาม Store ทันทีที่ Login สำเร็จ
 const { isLoggedIn, user } = storeToRefs(authStore)
 
-// 2. ปรับ Computed ให้ใช้ค่าจาก user.value
-const userInitial = computed(() => {
-    return user.value?.email?.charAt(0).toUpperCase() || 'U'
-})
-
-// 3. แสดงชื่อเล่น (ก่อน @)
-const displayName = computed(() => {
-    return user.value?.email ? user.value.email.split('@')[0] : 'Guest'
-})
+const userInitial = computed(() => user.value?.email?.charAt(0).toUpperCase() || 'U')
+const displayName = computed(() => (user.value?.email ? user.value.email.split('@')[0] : 'Guest'))
 
 const handleLogout = () => {
     authStore.clearAuth()
@@ -50,19 +34,18 @@ const handleLogout = () => {
                             trigger="click"
                             overlayClassName="user-popover-wrapper"
                             :arrow="false"
+                            :mouseEnterDelay="0.1"
                         >
                             <template #content>
                                 <div class="popover-inner">
                                     <div class="user-profile-header">
                                         <a-avatar class="large-avatar">{{ userInitial }}</a-avatar>
                                         <div class="info">
-                                            <div class="name">Authenticated User</div>
-                                            <div class="email">{{ user?.email }}</div>
+                                            <div class="name">{{ displayName }}</div>
+                                            <div class="role-tag">{{ user?.role || 'Member' }}</div>
                                         </div>
                                     </div>
-
                                     <div class="divider"></div>
-
                                     <nav class="popover-nav">
                                         <NuxtLink to="/" class="nav-item">
                                             <HomeOutlined /> <span>Home</span>
@@ -71,23 +54,17 @@ const handleLogout = () => {
                                             <AuditOutlined /> <span>My Tickets</span>
                                         </NuxtLink>
                                     </nav>
-
                                     <div class="divider"></div>
-
-                                    <button class="logout-action" @click="handleLogout">
-                                        <LogoutOutlined /> <span>Sign Out</span>
-                                    </button>
+                                    <div class="popover-footer">
+                                        <button class="logout-action" @click="handleLogout">
+                                            <LogoutOutlined /> <span>Sign Out</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
 
                             <div class="user-trigger">
-                                <a-avatar class="user-avatar">
-                                    <template #icon>
-                                        <UserOutlined v-if="!user" />
-                                        <span v-else>{{ userInitial }}</span>
-                                    </template>
-                                </a-avatar>
-
+                                <a-avatar class="user-avatar">{{ userInitial }}</a-avatar>
                                 <div class="user-info-text">
                                     <span class="username">{{ displayName }}</span>
                                     <span class="user-role">{{ user?.role || 'Member' }}</span>
@@ -96,26 +73,21 @@ const handleLogout = () => {
                             </div>
                         </a-popover>
                     </template>
-
                     <template v-else>
-                        <a-button type="primary" class="login-btn" @click="navigateTo('/login')"> 
-                            SIGN IN 
-                        </a-button>
+                        <a-button type="primary" class="login-btn" @click="navigateTo('/login')"> SIGN IN </a-button>
                     </template>
                 </div>
             </div>
         </a-layout-header>
 
         <a-layout-content class="main-content">
-            <div class="page-wrapper">
-                <slot />
-            </div>
+            <div class="page-wrapper"><slot /></div>
         </a-layout-content>
 
         <a-layout-footer class="custom-footer">
             <div class="footer-container">
                 <div class="footer-line"></div>
-                <p class="footer-text">CHIANG MAI HERITAGE &bull; YI PENG FESTIVAL E-TICKET SYSTEM</p>
+                <p class="footer-text">CHIANG MAI HERITAGE &bull; YI PENG FESTIVAL</p>
                 <p class="copyright">© 2026 Created with Passion</p>
             </div>
         </a-layout-footer>
@@ -123,24 +95,31 @@ const handleLogout = () => {
 </template>
 
 <style lang="scss" scoped>
+@use 'sass:color'; // สำคัญมากสำหรับการใช้ color.adjust
+
+$gold: #d4af37;
+$night: #020617;
+
 .main-layout {
     min-height: 100vh;
-    background: $color-night-blue;
+    background: $night;
 }
 
 .custom-header {
     position: fixed;
     z-index: 1000;
     width: 100%;
-    height: 80px;
-    line-height: 80px;
-    @include glass-effect;
-    border-radius: 0 !important;
-    border-top: none !important;
-    border-left: none !important;
-    border-right: none !important;
-    padding: 0 24px;
-
+    height: 70px;
+    line-height: 70px;
+    background: rgba(2, 6, 23, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba($gold, 0.2);
+    padding: 0 16px;
+    @media (min-width: 768px) {
+        height: 80px;
+        line-height: 80px;
+        padding: 0 24px;
+    }
     .header-content {
         height: 100%;
         max-width: 1400px;
@@ -152,26 +131,31 @@ const handleLogout = () => {
 }
 
 .logo-zone {
-    .logo-link {
-        text-decoration: none;
-    }
     .brand-text {
         display: flex;
         flex-direction: column;
         line-height: 1.1;
         .small-brand {
-            font-size: 0.7rem;
-            letter-spacing: 5px;
-            color: $color-gold;
+            font-size: 0.6rem;
+            letter-spacing: 3px;
+            color: $gold;
             font-weight: 800;
         }
         .main-brand {
-            font-size: 1.4rem;
+            font-size: 1.1rem;
             color: #fff;
-            font-family: 'Playfair Display', serif;
             font-weight: 700;
             .gold-accent {
-                color: $color-gold;
+                color: $gold;
+            }
+        }
+        @media (min-width: 768px) {
+            .small-brand {
+                font-size: 0.7rem;
+                letter-spacing: 5px;
+            }
+            .main-brand {
+                font-size: 1.4rem;
             }
         }
     }
@@ -181,110 +165,158 @@ const handleLogout = () => {
     .user-trigger {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 10px;
         cursor: pointer;
-        padding: 8px 16px;
+        padding: 4px 4px 4px 12px;
         border-radius: 50px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba($gold, 0.2);
         transition: all 0.3s ease;
-        height: 50px;
-
         &:hover {
-            background: rgba($color-gold, 0.1);
-            border-color: rgba($color-gold, 0.4);
+            background: rgba($gold, 0.15);
+            border-color: $gold;
         }
-
         .user-avatar {
-            background-color: $color-gold;
+            background-color: $gold;
             color: #000;
+            font-weight: bold;
         }
         .user-info-text {
-            display: flex;
+            display: none;
             flex-direction: column;
             line-height: 1.2;
             .username {
                 color: #fff;
                 font-weight: 600;
-                font-size: 0.9rem;
+                font-size: 0.85rem;
             }
             .user-role {
-                color: rgba(255, 255, 255, 0.4);
+                color: rgba(255, 255, 255, 0.5);
                 font-size: 0.7rem;
+            }
+            @media (min-width: 768px) {
+                display: flex;
             }
         }
         .icon-arrow {
-            color: $color-gold;
-            font-size: 0.75rem;
+            color: $gold;
+            font-size: 0.7rem;
+            margin-right: 8px;
+            @media (max-width: 767px) {
+                display: none;
+            }
+        }
+    }
+    .login-btn {
+        background: $gold;
+        border: none;
+        color: #000;
+        font-weight: bold;
+        border-radius: 50px;
+        &:hover {
+            background: #fff;
+            color: $gold;
         }
     }
 }
 
 .main-content {
-    padding-top: 80px;
+    padding-top: 70px;
+    @media (min-width: 768px) {
+        padding-top: 80px;
+    }
 }
 
 .custom-footer {
-    background: $color-deep-bg;
-    color: rgba(255, 255, 255, 0.5);
-    padding: 60px 20px;
+    background: color.adjust($night, $lightness: -2%); // ใช้แทน darken
+    padding: 40px 20px;
     text-align: center;
     .footer-line {
-        width: 60px;
-        height: 3px;
-        background: linear-gradient(90deg, transparent, $color-gold, transparent);
-        margin: 0 auto 25px;
+        width: 40px;
+        height: 2px;
+        background: $gold;
+        margin: 0 auto 20px;
     }
     .footer-text {
-        color: $color-gold;
-        letter-spacing: 3px;
-        font-weight: 600;
+        color: $gold;
+        letter-spacing: 2px;
+        font-size: 0.8rem;
+        margin-bottom: 8px;
+    }
+    .copyright {
+        color: rgba(255, 255, 255, 0.3);
+        font-size: 0.7rem;
     }
 }
 </style>
 
 <style lang="scss">
+/* ปรับปรุง Global Popover สำหรับ Dark Theme */
 .user-popover-wrapper {
-    & .ant-popover-inner {
-        background-color: unset;
-        padding: 0;
+    padding-top: 12px;
+
+    // ล้างค่าเดิมของ Ant Design
+    .ant-popover-inner {
+        background-color: transparent !important;
+        padding: 0 !important;
+        box-shadow: none !important;
     }
-    // สไตล์เนื้อหาภายในที่เราออกแบบ
+
+    .ant-popover-inner-content {
+        padding: 0 !important;
+    }
+
     .popover-inner {
         width: 260px;
-        background: #0f172a;
-        border-radius: 12px;
+        background: #0f172a; // Slate 900
+        border-radius: 16px;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
         overflow: hidden;
+        animation: popoverFade 0.2s ease-out;
 
         .user-profile-header {
             padding: 20px;
             display: flex;
             align-items: center;
             gap: 12px;
-            background: rgba(212, 175, 55, 0.05);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, transparent 100%);
 
             .large-avatar {
+                width: 44px;
+                height: 44px;
+                line-height: 44px;
                 background: #d4af37;
-                color: #0f172a;
+                color: #020617;
+                font-size: 18px;
+                font-weight: 700;
+                box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
             }
 
             .info {
                 .name {
                     color: #fff;
-                    font-weight: 600;
-                    font-size: 14px;
-                    line-height: 1.4;
+                    font-weight: 700;
+                    font-size: 15px;
+                    margin-bottom: 2px;
                 }
-                .email {
-                    color: rgba(255, 255, 255, 0.5);
-                    font-size: 12px;
+                .role-tag {
+                    display: inline-block;
+                    padding: 2px 8px;
+                    background: rgba(212, 175, 55, 0.1);
+                    color: #d4af37;
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
             }
         }
 
         .divider {
             height: 1px;
-            background: rgba(212, 175, 55, 0.2);
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
         }
 
         .popover-nav {
@@ -293,34 +325,75 @@ const handleLogout = () => {
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                padding: 10px 16px;
-                color: rgba(255, 255, 255, 0.8) !important;
-                border-radius: 8px;
-                transition: 0.2s;
-                text-decoration: none;
+                padding: 12px 16px;
+                color: rgba(255, 255, 255, 0.7) !important;
+                border-radius: 10px;
+                font-weight: 500;
+                transition: all 0.2s;
+
+                span {
+                    font-size: 14px;
+                }
+                .anticon {
+                    font-size: 16px;
+                    color: #d4af37;
+                }
 
                 &:hover {
-                    background: rgba(212, 175, 55, 0.1);
-                    color: #d4af37 !important;
+                    background: rgba(255, 255, 255, 0.05);
+                    color: #fff !important;
+                    transform: translateX(4px);
                 }
             }
         }
 
-        .logout-action {
-            width: 100%;
-            padding: 12px 24px;
-            background: transparent;
-            border: none;
-            color: #ff7875;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-            transition: 0.2s;
+        .popover-footer {
+            padding: 8px;
+            .logout-action {
+                width: 100%;
+                padding: 12px;
+                border-radius: 10px;
+                background: rgba(255, 120, 117, 0.05);
+                border: none;
+                color: #ff7875;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: all 0.2s;
 
-            &:hover {
-                background: rgba(255, 120, 117, 0.1);
+                &:hover {
+                    background: #ff7875;
+                    color: #fff;
+                }
             }
+        }
+    }
+}
+
+@keyframes popoverFade {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ปรับแก้ Responsive สำหรับมือถือ */
+@media (max-width: 576px) {
+    .user-popover-wrapper {
+        width: calc(100vw - 32px) !important;
+        left: 16px !important;
+        right: 16px !important;
+
+        .popover-inner {
+            width: 100%;
+            max-width: none;
         }
     }
 }

@@ -1,5 +1,5 @@
 // composables/useApi.ts
-import type { FetchResponse } from 'ofetch' // Import type เข้ามา
+import type { FetchResponse } from 'ofetch'
 
 export const useApi = () => {
   const config = useRuntimeConfig()
@@ -14,11 +14,9 @@ export const useApi = () => {
                   ...options.headers,
                   Authorization: token.value ? `Bearer ${token.value}` : '',
               },
-              // ระบุ Type ให้กับ { response }
               async onResponseError({ response }: { response: FetchResponse<any> }) {
                   if (response.status === 401) {
                       console.error('Session expired')
-                      // คุณอาจจะเพิ่มการ clear cookie ตรงนี้ถ้าต้องการ
                   }
               }
           })

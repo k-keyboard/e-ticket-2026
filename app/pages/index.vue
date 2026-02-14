@@ -23,6 +23,8 @@ const { data: articles, pending: articlesPending } = await useFetch('/api/articl
     query: { limit: 4, status: 'published' },
 })
 
+const { data: activeTicket, pending: ticketPending, refresh } = await useFetch('/api/tickets/active')
+
 // 3. Fetch Events Schedule
 const { data: schedule, pending, error } = await useFetch('/api/events')
 
@@ -45,7 +47,6 @@ const handleCheckout = async (priceId) => {
             method: 'POST',
             body: {
                 priceId: priceId,
-                // ส่ง Email ของ User ไปที่ API
                 email: user.value?.email,
             },
         })
@@ -54,11 +55,55 @@ const handleCheckout = async (priceId) => {
             window.location.href = response.url
         }
     } catch (error) {
-        message.error('ระบบขัดข้อง ไม่สามารถไปหน้าชำระเงินได้')
+        message.error('System error, cannot proceed to checkout.')
         console.error(error)
     } finally {
         isProcessing.value = false
     }
+}
+
+const validateAndCheckout = async () => {
+    // ดึงข้อมูลล่าสุดจาก Server ก่อน (กันคนค้างหน้าเว็บไว้นาน)
+    await refresh()
+    const ticket = await activeTicket.value
+    // 1. ตรวจสอบสต๊อกตั๋ว
+    if (ticket.stock_quantity <= 0) {
+        Modal.info({
+            title: 'Ticket Unavailble',
+            content: h('div', { class: 'lanna-modal-content' }, [
+                h('p', 'We apologize, but this ticket category is currently sold out.'),
+                h('p', 'Please check back later or contact our support team for further assistance.'),
+            ]),
+            okText: 'Understood',
+            centered: true,
+            maskClosable: true,
+            // เพิ่มสไตล์ให้เข้ากับธีม Gold & Night
+            wrapClassName: 'lanna-soldout-modal',
+        })
+        return
+    }
+
+    // 2. ตรวจสอบสถานะ Login
+    if (!user.value || !user.value.email) {
+        showLoginWarning()
+        return
+    }
+
+    const priceId = ticket.priceId
+    handleCheckout(priceId)
+}
+
+const showLoginWarning = () => {
+    Modal.warning({
+        title: 'Please Login First',
+        content: 'You must be logged in to purchase a ticket. Please sign in to your account to continue.',
+        okText: 'Go to Login',
+        centered: true,
+        maskClosable: true,
+        onOk() {
+            navigateTo('/login')
+        },
+    })
 }
 </script>
 
@@ -89,25 +134,47 @@ const handleCheckout = async (priceId) => {
         <a-layout-content class="content-container">
             <section id="history" class="section-v2">
                 <div class="section-header">
-                    <span class="sub-label">OUR STORY</span>
+                    <span class="sub-label">OUR HERITAGE</span>
                     <h2 class="title-v2">The Legacy of Light</h2>
                 </div>
+
                 <div class="history-grid">
                     <div class="history-card main-text">
                         <p class="drop-cap">
-                            Originating from the ancient Lanna Kingdom, Yi Peng is a sacred festival celebrated on the
-                            full moon of the 2nd month of the Lanna calendar.
+                            Rooted in the soul of the ancient Lanna Kingdom, Yi Peng is Chiang Mai’s most sacred time of
+                            reflection. Celebrated on the full moon of the 12th Thai lunar month, it marks a celestial
+                            transition where the physical and spiritual worlds meet.
                         </p>
                         <p>
-                            It is a time for devotees to release lanterns (Khom Loy) into the celestial realm,
-                            symbolizing the release of misfortune and paying homage to the Phra Ket Kaew Chulamanee
-                            stupa in heaven.
+                            During this "Festival of Lights," the city is transformed by thousands of
+                            <strong>Khom Loy</strong> (sky lanterns) drifting into the night sky. For the people of
+                            Northern Thailand, this is more than a spectacle; it is a ritual of
+                            <em>Sado-Kro</em>—releasing misfortune and letting go of the past.
+                        </p>
+                        <p>
+                            As these golden orbs ascend, they carry silent prayers to the
+                            <strong>Phra Ket Kaew Chulamanee</strong>, the sacred stupa in the highest heaven. Down on
+                            earth, the flickering "Phang Pratheep" (clay lamps) illuminate homes and temples, guiding
+                            the way for a year of wisdom and prosperity.
                         </p>
                     </div>
+
                     <div class="history-stat">
                         <div class="stat-item">
-                            <span class="num">700+</span>
-                            <span class="lab">Years of Tradition</span>
+                            <div class="stat-visual">
+                                <span class="num">700+</span>
+                                <span class="plus">Years</span>
+                            </div>
+                            <span class="lab">Lanna Tradition</span>
+                        </div>
+
+                        <div class="stat-divider"></div>
+
+                        <div class="stat-item">
+                            <div class="stat-visual">
+                                <span class="num">100%</span>
+                            </div>
+                            <span class="lab">Cultural Authenticity</span>
                         </div>
                     </div>
                 </div>
@@ -177,54 +244,40 @@ const handleCheckout = async (priceId) => {
                 </div>
             </section>
 
-            <div class="lanna-divider"></div>
+            <div v-if="activeTicket" class="lanna-divider"></div>
 
-            <section id="ticket" class="section-v2">
+            <section v-if="activeTicket" id="ticket" class="section-v2">
                 <div class="section-header text-center">
                     <span class="sub-label">ADMISSION</span>
                     <h2 class="title-v2">Your Golden Passage</h2>
                 </div>
 
                 <div class="ticket-artistic-wrap">
-                    <div class="ticket-card-v2">
-                        <div class="ticket-left">
-                            <div class="ticket-brand">YI PENG 2025</div>
-                            <div class="ticket-main-info">
-                                <h4 class="ticket-type">VIP ADMISSION</h4>
-                                <div class="detail-row">
-                                    <div class="detail-item">
-                                        <label>DATE</label>
-                                        <span>Nov 15, 2025</span>
-                                    </div>
-                                    <div class="detail-item">
-                                        <label>VENUE</label>
-                                        <span>Ban Pao, Mae Taeng</span>
-                                    </div>
-                                </div>
-                                <div class="ticket-perks">
-                                    <div class="perk-item"><CheckCircleOutlined /> Free Admission</div>
-                                    <div class="perk-item"><CheckCircleOutlined /> 1 Complementary Lantern</div>
-                                    <div class="perk-item"><CheckCircleOutlined /> 1 Free Local Meal Set</div>
-                                </div>
-                            </div>
-                            <div class="ticket-footer">
-                                <span class="serial">#YP-888-2025</span>
-                                <span class="price">฿ 5,999.00</span>
-                            </div>
-                        </div>
-                        <div class="ticket-right">
-                            <div class="qr-zone">
-                                <a-qrcode value="VIP-TICKET" :size="100" color="#d4af37" bgColor="transparent" />
-                                <p>SCAN TO ENTRY</p>
+                    <ticket-example v-if="!ticketPending && activeTicket" :key="activeTicket.id" :data="activeTicket" />
+                    <div v-else-if="ticketPending">
+                        <a-skeleton active />
+                    </div>
+
+                    <div v-if="activeTicket" class="price-display-wrapper">
+                        <div class="price-details">
+                            <span class="price-label">INVESTMENT IN TRADITION</span>
+
+                            <div class="price-value-group">
+                                <span class="currency">{{ activeTicket.currency?.toUpperCase() }}</span>
+
+                                <span class="amount">{{ Number(activeTicket.price).toLocaleString() }}</span>
                             </div>
                         </div>
                     </div>
-
+                    <div v-if="activeTicket.stock_quantity <= 5" class="stock-warning">
+                        Only {{ activeTicket.stock_quantity }} lanterns remaining
+                    </div>
                     <div class="checkout-action-area">
                         <button
+                            :key="activeTicket?.stock_quantity"
                             class="lanna-checkout-btn"
-                            @click="handleCheckout('price_1StROIJZDAEYrAhla5l3SrSG')"
-                            :disabled="isProcessing"
+                            @click="validateAndCheckout(activeTicket)"
+                            :disabled="isProcessing || activeTicket?.stock_quantity <= 0"
                         >
                             <span class="btn-content" v-if="!isProcessing">
                                 <span class="btn-text">SECURE CHECKOUT</span>
@@ -338,7 +391,6 @@ const handleCheckout = async (priceId) => {
 <style lang="scss" scoped>
 @use 'sass:math';
 
-// Style สำหรับส่วนสิทธิประโยชน์ในตั๋ว
 .ticket-perks {
     margin-top: 25px;
     padding-top: 15px;
@@ -360,7 +412,6 @@ const handleCheckout = async (priceId) => {
     }
 }
 
-// Style สำหรับส่วน Venue
 .venue-container {
     display: flex;
     flex-direction: column;
@@ -409,7 +460,6 @@ const handleCheckout = async (priceId) => {
     }
 }
 
-// --- โค้ดเดิมที่คงไว้ทั้งหมด ---
 .lanna-divider {
     height: 40px;
     width: 100%;
@@ -490,7 +540,6 @@ const handleCheckout = async (priceId) => {
             }
         }
 
-        // เอฟเฟกต์ตอน Hover
         &:hover {
             :deep(.ant-image-img) {
                 transform: scale(1.1);
@@ -778,7 +827,7 @@ const handleCheckout = async (priceId) => {
         left: 0;
         top: 0;
         background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(0, 0, 0, 0.2)),
-            url('../assets//images/bg-ticket.png');
+            url('../assets/images/bg-ticket.png');
         background-position: center;
         background-size: cover;
         background-repeat: no-repeat;
@@ -867,6 +916,50 @@ const handleCheckout = async (priceId) => {
                 color: $color-gold;
                 letter-spacing: 2px;
                 font-weight: 700;
+            }
+        }
+    }
+    @media (max-width: 768px) {
+        flex-direction: column;
+        height: auto;
+        max-width: 100%;
+        .ticket-left {
+            border-right: none;
+            border-bottom: 2px dashed rgba($color-gold, 0.2);
+            padding: 30px 24px;
+
+            &::before,
+            &::after {
+                /* ย้ายรอยบากตั๋วมาไว้ที่ด้านข้างรอยปรุแนวนอน */
+                right: auto;
+                bottom: -11px;
+                left: -11px;
+            }
+            &::after {
+                left: auto;
+                right: -11px;
+            }
+        }
+
+        .ticket-type {
+            font-size: 1.8rem;
+        }
+
+        .detail-row {
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .ticket-right {
+            padding: 30px;
+            min-width: 100%;
+            background: rgba($color-gold, 0.05);
+        }
+
+        .ticket-footer {
+            margin-top: 30px;
+            .price {
+                font-size: 1.5rem;
             }
         }
     }
@@ -1065,7 +1158,7 @@ const handleCheckout = async (priceId) => {
             margin-bottom: 15px;
             line-height: 1.4;
             display: -webkit-box;
-            -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
@@ -1077,7 +1170,7 @@ const handleCheckout = async (priceId) => {
             margin-bottom: 25px;
             flex-grow: 1;
             display: -webkit-box;
-            -webkit-line-clamp: 3;
+            line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
@@ -1174,7 +1267,148 @@ const handleCheckout = async (priceId) => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 40px; // ระยะห่างระหว่างตั๋วกับปุ่ม
+    gap: 20px;
+    & .price-display-wrapper {
+        margin: 24px auto 32px;
+        text-align: center;
+        position: relative;
+        max-width: 600px;
+
+        &::before,
+        &::after {
+            content: '';
+            position: absolute;
+            top: 55%;
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, $color-gold);
+        }
+        &::before {
+            left: 0;
+        }
+        &::after {
+            right: 0;
+            transform: rotate(180deg);
+        }
+
+        .price-details {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            .price-label {
+                font-size: 14px;
+                letter-spacing: 5px;
+                color: $color-gold;
+                font-weight: 700;
+                opacity: 0.9;
+            }
+
+            .price-value-group {
+                display: flex;
+                align-items: baseline;
+                gap: 12px;
+
+                .currency {
+                    font-size: 2rem;
+                    font-weight: 600;
+                    color: $color-gold;
+                    font-family: 'serif';
+                }
+
+                .amount {
+                    font-size: 6rem;
+                    font-weight: 900;
+                    color: #fff;
+                    line-height: 0.9;
+                    text-shadow: 0 0 10px rgba($color-gold, 0.5), 0 0 30px rgba($color-gold, 0.3),
+                        0 10px 20px rgba(0, 0, 0, 0.4);
+
+                    background: linear-gradient(to bottom, #fff 20%, $color-gold 100%);
+                    background-clip: text;
+                    -webkit-text-fill-color: transparent;
+
+                    @media (max-width: 640px) {
+                        font-size: 4rem;
+                    }
+                }
+            }
+        }
+    }
+
+    .stock-warning {
+        margin-top: 12px;
+        font-size: 14px;
+        letter-spacing: 1px;
+        color: #ef4444;
+        font-weight: 700;
+        background: rgba(#ef4444, 0.15);
+        padding: 4px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(#ef4444, 0.3);
+        box-shadow: 0 0 15px rgba(#ef4444, 0.2);
+    }
+
+    .lanna-checkout-btn {
+        width: 100%;
+        max-width: 400px;
+        padding: 18px 32px;
+        background: $color-night;
+        border: 2px solid $color-gold;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+
+        .btn-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            color: $color-gold;
+        }
+
+        .btn-text {
+            font-size: 1.1rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-icon {
+            font-size: 1.2rem;
+            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+        }
+
+        &:hover:not(:disabled) {
+            background: $color-gold;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba($color-gold, 0.3);
+
+            .btn-text,
+            .btn-icon {
+                color: $color-night;
+                text-shadow: none;
+            }
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            filter: grayscale(1);
+            cursor: not-allowed;
+        }
+    }
+
+    .secure-badge {
+        margin-top: 16px;
+        font-size: 12px;
+        color: rgba(#fff, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        letter-spacing: 1px;
+    }
 }
 
 .checkout-action-area {
@@ -1182,7 +1416,6 @@ const handleCheckout = async (priceId) => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
 }
 
 .lanna-checkout-btn {
@@ -1233,7 +1466,6 @@ const handleCheckout = async (priceId) => {
         filter: grayscale(0.5);
     }
 
-    // แสงเงาวิ่งผ่านปุ่ม (Shimmer Effect)
     &::after {
         content: '';
         position: absolute;
@@ -1244,6 +1476,13 @@ const handleCheckout = async (priceId) => {
         background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
         transform: rotate(45deg);
         animation: shimmer 3s infinite;
+    }
+    @media (max-width: 576px) {
+        width: 100%;
+        height: 55px;
+        .btn-text {
+            font-size: 0.95rem;
+        }
     }
 }
 
@@ -1265,10 +1504,43 @@ const handleCheckout = async (priceId) => {
     letter-spacing: 1px;
 }
 
-// Mobile Responsive
 @media (max-width: 576px) {
     .lanna-checkout-btn {
         max-width: 100%;
+    }
+}
+
+.ticket-artistic-wrap {
+    width: 100%;
+    padding: 0 10px;
+}
+</style>
+
+<style lang="scss">
+.lanna-soldout-modal {
+    .ant-modal-content {
+        background: #0f172a;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 15px;
+    }
+    .ant-modal-confirm-title {
+        color: #d4af37 !important;
+        font-weight: 800;
+        font-size: 1.2rem;
+    }
+    .ant-modal-confirm-content {
+        color: rgba(255, 255, 255, 0.8) !important;
+        margin-top: 12px;
+    }
+    .ant-btn-primary {
+        background: #d4af37;
+        border-color: #d4af37;
+        color: #020617;
+        font-weight: 700;
+        &:hover {
+            background: #fff;
+            color: #d4af37;
+        }
     }
 }
 </style>

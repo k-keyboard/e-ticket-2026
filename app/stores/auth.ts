@@ -1,37 +1,30 @@
 import { defineStore } from 'pinia'
 
 export const useAuthStore = defineStore('auth', () => {
-    // 1. กำหนด Cookie สำหรับ User และ Token
-    const userCookie = useCookie<{ email: string; role: string } | null>('user_data', {
-        maxAge: 60 * 60 * 24 * 7,
-        path: '/'
-    })
-    const tokenCookie = useCookie<string | null>('auth_token', {
-        maxAge: 60 * 60 * 24 * 7,
-        path: '/'
-    })
+    const userCookie = useCookie('user_data', { maxAge: 60 * 60 * 24 * 7, path: '/' })
+    const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 * 7, path: '/' })
 
-    // 2. State: ใช้ค่าจาก Cookie มาตั้งต้น
-    const user = ref(userCookie.value || null)
-    const token = ref(tokenCookie.value || null)
+    const user: any = ref(userCookie.value || null)
+    const token: any = ref(tokenCookie.value || null)
 
-    // 3. Computed: ตรวจสอบสถานะการ Login
     const isLoggedIn = computed(() => !!token.value)
 
-    // 4. Actions: อัปเดตทั้ง State และ Cookie พร้อมกันเพื่อให้ UI เปลี่ยนทันที
-    const setAuth = (userData: { email: string; role: string }, userToken: string) => {
-        user.value = userData
-        token.value = userToken
-        
+    // บังคับให้ ref เปลี่ยนตาม cookie ทันที
+    watch(userCookie, (newVal) => { user.value = newVal }, { deep: true })
+    watch(tokenCookie, (newVal) => { token.value = newVal })
+
+    const setAuth = (userData: string | null | undefined, userToken: string | null | undefined) => {
         userCookie.value = userData
         tokenCookie.value = userToken
+        user.value = userData
+        token.value = userToken
     }
 
     const clearAuth = () => {
-        user.value = null
-        token.value = null
         userCookie.value = null
         tokenCookie.value = null
+        user.value = null
+        token.value = null
     }
 
     return { user, token, isLoggedIn, setAuth, clearAuth }

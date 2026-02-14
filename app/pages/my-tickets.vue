@@ -31,12 +31,15 @@ const {
     immediate: !!userEmail.value,
 })
 
+console.log(myTickets);
+
 const goBack = () => router.push('/')
 
 const isQrModalOpen = ref(false)
 const selectedTicket = ref(null)
 
 const handleTicketClick = (ticket) => {
+    console.log(ticket);
     if (ticket.is_used) return
 
     Modal.confirm({
@@ -112,7 +115,7 @@ const handleTicketClick = (ticket) => {
             <div v-else class="ticket-masonry">
                 <template v-for="order in myTickets" :key="order.id">
                     <div v-for="ticket in order.tickets" :key="ticket.ticket_code" class="masonry-item">
-                        <ticket-card-my-order :ticket="ticket" :order="order" @click="handleTicketClick" />
+                        <ticket-card-my-order :ticket="ticket" :order="order" @on-click="handleTicketClick" />
                     </div>
                 </template>
             </div>
@@ -189,7 +192,7 @@ const handleTicketClick = (ticket) => {
 
 // Grid Layout ของ ticket
 .ticket-masonry {
-    columns: 3;
+    columns: 2;
     column-gap: 20px;
     .masonry-item {
         break-inside: avoid;
@@ -398,7 +401,7 @@ const handleTicketClick = (ticket) => {
 
 @media (max-width: 768px) {
     .ticket-masonry {
-        columns: 2 150px;
+        columns: 1;
     }
 }
 

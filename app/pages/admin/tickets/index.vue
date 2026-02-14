@@ -6,6 +6,7 @@ import {
     MinusOutlined,
     TagsOutlined,
     DeleteOutlined,
+    ExclamationCircleOutlined,
 } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 
@@ -14,7 +15,17 @@ definePageMeta({ layout: 'admin' })
 useHead({ title: 'จัดการตั๋ว | Lanna Admin' })
 
 // 2. Data Fetching
-const { data: tickets, pending, refresh } = await useFetch('/api/tickets')
+const { data: tickets, pending, refresh } = await useFetch('/api/tickets', {
+    onResponse({ response }) {
+        if (response._data) {
+            // สร้าง Property ใหม่เพื่อให้ v-model ทำงานได้ลื่นไหล
+            response._data.forEach(item => {
+                item.checkedStatus = item.is_active === 'active'
+                item.loading = false
+            })
+        }
+    }
+})
 
 // 3. States สำหรับ UI และ Modal
 const syncing = ref(false)
@@ -23,19 +34,21 @@ const stockLoading = ref(false)
 const selectedTicket = ref(null)
 const stockAdjustment = ref(0)
 
-// 4. Computed: คำนวณสต็อกสุทธิ (ป้องกันค่าติดลบ)
+// 4. Computed: คำนวณสต็อกสุทธิ
 const finalStock = computed(() => {
     if (!selectedTicket.value) return 0
     const result = selectedTicket.value.stock_quantity + (stockAdjustment.value || 0)
     return result < 0 ? 0 : result
 })
 
-// 5. ฟังก์ชัน Sync ข้อมูลจาก Stripe
+// 5. ฟังก์ชัน Sync ข้อมูล (เน้นย้ำความปลอดภัยของสต็อก)
 const handleSync = async () => {
     syncing.value = true
     try {
+        // แนะนำ: API ฝั่ง Server ควรมี Logic:
+        // IF ticket_exists THEN update_price_only ELSE create_new_and_set_stock_0
         await $fetch('/api/tickets/sync', { method: 'POST' })
-        message.success('ซิงค์ข้อมูลและตรวจสอบความถูกต้องจาก Stripe สำเร็จ')
+        message.success('ซิงค์ข้อมูลสำเร็จ (คงสต็อกรายการเดิมไว้เรียบร้อย)')
         refresh()
     } catch (e) {
         message.error('ไม่สามารถซิงค์ข้อมูลได้')
@@ -44,19 +57,20 @@ const handleSync = async () => {
     }
 }
 
-// 6. ฟังก์ชัน Soft Delete (ลบโดย Admin)
+// 6. ฟังก์ชัน Soft Delete (ลบเฉพาะรายการที่ Sync แล้วไม่พบใน Stripe)
 const handleDelete = (id) => {
     Modal.confirm({
-        title: 'ยืนยันการลบตั๋ว?',
-        content:
-            'ตั๋วนี้จะถูกระงับการขายและสถานะจะถูกเปลี่ยนเป็น "ไม่มีใน Stripe" (ข้อมูลยังคงอยู่ในระบบเพื่อการตรวจสอบ)',
-        okText: 'ลบตั๋ว',
+        title: 'ยืนยันการลบทิ้งจากระบบ?',
+        icon: h(ExclamationCircleOutlined, { style: 'color: #ff4d4f' }),
+        content: 'รายการนี้ไม่มีอยู่บน Stripe แล้ว การลบจะเป็นการ Soft Delete เพื่อไม่ให้แสดงในหน้าจัดการอีก',
+        okText: 'ยืนยันการลบ',
         okType: 'danger',
         centered: true,
         onOk: async () => {
             try {
+                // เรียก API Delete (ควรเขียน Logic ใน Backend ให้ set deleted_at หรือลบถาวรตามต้องการ)
                 await $fetch(`/api/tickets/${id}`, { method: 'DELETE' })
-                message.success('ลบตั๋วเรียบร้อยแล้ว')
+                message.success('ลบข้อมูลที่ตกค้างเรียบร้อยแล้ว')
                 refresh()
             } catch (e) {
                 message.error('ลบไม่สำเร็จ')
@@ -93,11 +107,11 @@ const handleSaveStock = async () => {
     }
 }
 
-// 8. เปลี่ยนสถานะการขาย (Toggle Switch)
+// 8. เปลี่ยนสถานะการขาย (ปรับปรุงเพื่อให้ UI อัพเดททันที)
 const toggleStatus = async (record, checked) => {
+    record.loading = true
     const newStatus = checked ? 'active' : 'suspended'
-    const oldStatus = record.is_active
-    record.is_active = newStatus
+    
     try {
         await $fetch(`/api/tickets/${record.id}`, {
             method: 'PATCH',
@@ -106,10 +120,19 @@ const toggleStatus = async (record, checked) => {
                 is_active: newStatus,
             },
         })
-        message.success(`สถานะตั๋ว: ${checked ? 'เปิดการขาย' : 'ระงับการขาย'}`)
+        
+        message.success(checked ? 'เปิดขายรายการนี้ และปิดรายการอื่นแล้ว' : 'ปิดการขายเรียบร้อย')
+        
+        // สำคัญมาก: ต้อง refresh ข้อมูลทั้งหมด 
+        // เพื่อให้ Switch ของตั๋วใบอื่นเด้งกลับเป็น "ปิด" (UI Sync)
+        await refresh() 
+        
     } catch (e) {
-        record.is_active = oldStatus
+        // หาก Error ให้ดีด Switch กลับค่าเดิม
+        record.checkedStatus = !checked
         message.error('ไม่สามารถเปลี่ยนสถานะได้')
+    } finally {
+        record.loading = false
     }
 }
 
@@ -130,9 +153,9 @@ const columns = [
                 <a-typography-title :level="2" style="margin: 0">
                     <TagsOutlined style="margin-right: 12px; color: #d4af37" /> จัดการตั๋ว
                 </a-typography-title>
-                <a-typography-text type="secondary"
-                    >ซิงค์ราคาจาก Stripe และควบคุมสต็อกตั๋ว (รายการที่ขีดฆ่าคือถูกลบจาก Stripe แล้ว)</a-typography-text
-                >
+                <a-typography-text type="secondary">
+                    ระบบจะรักษาจำนวนสต็อกเดิมไว้เมื่อซิงค์ข้อมูล | รายการที่ข้อมูลไม่ตรงกับ Stripe จะปรากฏปุ่มลบ
+                </a-typography-text>
             </div>
             <a-space>
                 <a-button @click="refresh" :loading="pending">
@@ -156,7 +179,9 @@ const columns = [
                             >
                                 {{ record.name }}
                             </a-typography-text>
-                            <a-tag v-if="record.deleted_at" color="error">ไม่มีใน Stripe</a-tag>
+                            <a-tooltip v-if="record.deleted_at" title="ข้อมูลนี้ไม่พบใน Stripe แล้ว">
+                                <a-tag color="error">Mismatch</a-tag>
+                            </a-tooltip>
                         </a-space>
                     </template>
 
@@ -190,8 +215,9 @@ const columns = [
 
                     <template v-else-if="column.key === 'status'">
                         <a-switch
-                            :checked="record.is_active === 'active'"
+                            v-model:checked="record.checkedStatus"
                             :disabled="record.deleted_at !== null"
+                            :loading="record.loading"
                             checked-children="เปิดขาย"
                             un-checked-children="ปิด"
                             @change="(val) => toggleStatus(record, val)"
@@ -200,14 +226,14 @@ const columns = [
 
                     <template v-else-if="column.key === 'action'">
                         <a-button
-                            v-if="record.deleted_at === null"
+                            v-if="record.deleted_at !== null"
                             size="small"
                             danger
                             @click="handleDelete(record.id)"
                         >
-                            <template #icon><DeleteOutlined /></template>
+                            <template #icon><DeleteOutlined /></template> ลบข้อมูลตกค้าง
                         </a-button>
-                        <a-typography-text v-else type="secondary">-</a-typography-text>
+                        <a-typography-text v-else type="secondary">สมบูรณ์</a-typography-text>
                     </template>
                 </template>
             </a-table>
@@ -219,7 +245,7 @@ const columns = [
                     {{ selectedTicket?.name }}
                 </a-typography-title>
                 <a-typography-text type="secondary"
-                    >ปรับปรุงสต็อก (สต็อกเริ่มต้น: {{ selectedTicket?.stock_quantity }})</a-typography-text
+                    >ปรับปรุงสต็อก (สต็อกปัจจุบัน: {{ selectedTicket?.stock_quantity }})</a-typography-text
                 >
 
                 <div style="margin: 32px 0">
@@ -274,17 +300,14 @@ const columns = [
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     border: 1px solid #f0f0f0;
 }
-
 .gold-btn {
     background-color: #001529;
     border: none;
 }
-
 .gold-btn:hover {
     background-color: #d4af37 !important;
     color: #001529 !important;
 }
-
 :deep(.ant-table-thead > tr > th) {
     background-color: #fafafa;
     font-weight: 700;
