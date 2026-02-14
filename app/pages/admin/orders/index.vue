@@ -11,7 +11,7 @@ import dayjs from 'dayjs'
 
 // 1. Setup Meta & Layout
 definePageMeta({ layout: 'admin' })
-useHead({ title: 'จัดการคำสั่งซื้อ | Yi Peng 2025' })
+useHead({ title: 'จัดการคำสั่งซื้อ | Yi Peng 2026' })
 
 // 2. Data Fetching
 const { data: response, pending, refresh } = await useFetch('/api/orders')

@@ -118,7 +118,7 @@ const showLoginWarning = () => {
             <div class="hero-inner">
                 <div class="location-tag"><EnvironmentOutlined /> CHIANG MAI, THAILAND</div>
                 <h1 class="main-title">Yi Peng <span class="gold-text">Festival</span></h1>
-                <p class="main-subtitle">The Light of Spiritual Heritage 2025</p>
+                <p class="main-subtitle">The Light of Spiritual Heritage 2026</p>
                 <div class="hero-actions">
                     <a-button type="primary" class="btn-reserve" href="#ticket">
                         RESERVE NOW <ArrowRightOutlined />
@@ -930,7 +930,6 @@ const showLoginWarning = () => {
 
             &::before,
             &::after {
-                /* ย้ายรอยบากตั๋วมาไว้ที่ด้านข้างรอยปรุแนวนอน */
                 right: auto;
                 bottom: -11px;
                 left: -11px;

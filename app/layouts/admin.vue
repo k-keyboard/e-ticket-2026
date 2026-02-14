@@ -34,7 +34,7 @@ const menuItems = [
     { key: '5', icon: ScheduleOutlined, label: 'จัดการกิจกรรม', path: '/admin/events' },
     { key: '6', icon: PictureOutlined, label: 'จัดการแกลอรี่', path: '/admin/gallery' },
     { key: '7', icon: FileTextOutlined, label: 'จัดการบทความ', path: '/admin/articles' },
-    { key: '8', icon: SettingOutlined, label: 'ตั้งค่าระบบ', path: '/admin/settings' },
+    // { key: '8', icon: SettingOutlined, label: 'ตั้งค่าระบบ', path: '/admin/settings' },
 ]
 
 watchEffect(() => {
@@ -189,7 +189,6 @@ const handleLogout = () => navigateTo('/login')
 </template>
 
 <style lang="scss" scoped>
-// ไม่ใช้ darken() เพื่อเลี่ยงบัค ใช้การระบุสีตรงๆ ร่วมกับ Global Variables
 .admin-shell {
     min-height: 100vh;
     background: #f8fafc;
@@ -206,7 +205,7 @@ const handleLogout = () => navigateTo('/login')
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #000c17; // สีที่เข้มกว่า $color-night
+            background: #000c17;
             .logo-box {
                 color: $color-gold;
                 font-weight: 800;
@@ -318,7 +317,7 @@ const handleLogout = () => navigateTo('/login')
 
                 .avatar-wrapper {
                     position: relative;
-                    display: inline-flex; // ช่วยให้ container รัดพอดีกับ avatar
+                    display: inline-flex;
 
                     .avatar-gold {
                         background: $color-gold;
@@ -331,14 +330,12 @@ const handleLogout = () => navigateTo('/login')
                         position: absolute;
                         bottom: 2px;
                         right: 2px;
-                        width: 12px; // ปรับขนาดให้ชัดขึ้นเล็กน้อย
+                        width: 12px;
                         height: 12px;
                         background: #52c41a;
-                        border: 2px solid #fff; // ขอบสีขาวจะช่วยตัดกับพื้นหลังทำให้ดูไม่ลอยแปลกๆ
+                        border: 2px solid #fff;
                         border-radius: 50%;
                         z-index: 1;
-
-                        // เพิ่มเงาให้จุดนิดนึงจะดูเนียนขึ้น
                         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
                     }
                 }
@@ -370,7 +367,6 @@ const handleLogout = () => navigateTo('/login')
             }
         }
 
-        // Dropdown Menu Styling
         .user-dropdown-menu {
             padding: 8px;
             border-radius: 12px;
@@ -456,13 +452,12 @@ const handleLogout = () => navigateTo('/login')
     }
 }
 
-// กำหนดสีปุ่ม Floating ให้ใช้ตัวแปรทอง
 :deep(.ant-float-btn-primary) {
     .ant-float-btn-body {
         background: $color-gold;
         &:hover {
             background: #ad8b4d;
-        } // ใช้สีทองที่เข้มขึ้นแทน darken
+        }
     }
 }
 </style>
