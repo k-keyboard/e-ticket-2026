@@ -63,7 +63,7 @@
                         <span class="error-subtitle">This invitation link is no longer valid.</span>
                     </template>
                     <template #extra>
-                        <a-button type="primary" class="login-button" @click="navigateTo('/register')">
+                        <a-button type="primary" class="login-button" @click="navigateTo('/login')">
                             Request New Link
                         </a-button>
                     </template>
@@ -247,6 +247,9 @@ const handleSetup = async () => {
     input {
         background: transparent !important;
         color: #fff !important;
+        &::placeholder {
+            color: rgba(255, 255, 255, 0.3) !important;
+        }
     }
     .prefix-icon,
     .ant-input-password-icon {

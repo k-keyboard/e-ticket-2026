@@ -15,7 +15,7 @@ export const sendTicketEmail = async (to: string, ticketData: {
         tls: { rejectUnauthorized: false }
     })
 
-    const siteUrl = process.env.PUBLIC_SITE_URL || 'http://localhost:3000'
+    const siteUrl = process.env.PUBLIC_SITE_URL
     const myTicketsUrl = `${siteUrl}/my-tickets`
 
     const htmlContent = `

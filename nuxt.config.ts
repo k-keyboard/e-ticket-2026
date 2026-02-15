@@ -10,31 +10,26 @@ export default defineNuxtConfig({
                 { name: 'viewport', content: 'width=device-width, initial-scale=1' },
                 { name: 'description', content: 'Experience the magic of Yi Peng Festival in Chiang Mai.' },
                 { name: 'theme-color', content: '#020617' },
-                { name: 'apple-mobile-web-app-capable', content: 'yes' },
+                { name: 'mobile-web-app-capable', content: 'yes' },
                 { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
                 { name: 'apple-mobile-web-app-title', content: 'Yi Peng' }
             ],
-
-            // การกำหนด Favicon และ Font
             link: [
                 { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-                { rel: 'apple-touch-icon', href: '/pwa-192x192.png' } // สำหรับ iOS
+                { rel: 'apple-touch-icon', href: '/pwa-192x192.png' }
             ]
         }
     },
 
-    // เปิดโครงสร้าง Nuxt 4 อย่างเต็มตัว
     future: {
         compatibilityVersion: 4,
     },
 
-    // รวมไฟล์ CSS/SCSS หลัก
     css: [
         'ant-design-vue/dist/reset.css',
         '~/assets/scss/main.scss'
     ],
 
-    // เพิ่ม Modules
     modules: [
         '@ant-design-vue/nuxt',
         '@pinia/nuxt',
@@ -50,47 +45,45 @@ export default defineNuxtConfig({
             name: 'Yi Peng Lanna Ticket',
             short_name: 'YiPeng',
             description: 'The Golden Passage to Yi Peng Festival',
-            theme_color: '#020617', // $color-night
+            theme_color: '#020617',
             background_color: '#020617',
             display: 'standalone',
-            display_override: ['standalone', 'window-controls-overlay'],
             orientation: 'portrait',
-            scope: '/',
             start_url: '/',
             icons: [
-                {
-                    src: 'pwa-192x192.png',
-                    sizes: '192x192',
-                    type: 'image/png',
-                },
-                {
-                    src: 'pwa-512x512.png',
-                    sizes: '512x512',
-                    type: 'image/png',
-                    purpose: 'any maskable',
-                }
+                { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+                { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
             ]
         },
         workbox: {
             navigateFallback: '/',
-            globPatterns: ['**/*.{js,css,html,png,svg,ico}'], // Cache ไฟล์พื้นฐาน
-            maximumFileSizeToCacheInBytes: 5242880,
+            navigateFallbackDenylist: [/^\/api/], // ไม่ต้อง fallback สำหรับ API
+            globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+            cleanupOutdatedCaches: true,
         },
         devOptions: {
-            enabled: true, // เปิดให้ทดสอบได้ในโบท dev (จะเห็น Service Worker ใน DevTools)
-            type: 'classic',
+            enabled: true, // ปิดไว้ตามเดิมเพื่อ Debug หน้าเว็บหลักให้ผ่านก่อน
+            type: 'module',
+            suppressWarnings: true
         }
     },
 
-    tiptap: {
-        prefix: 'Tiptap',
+    runtimeConfig: {
+        smtpHost: process.env.SMTP_HOST,
+        smtpPort: process.env.SMTP_PORT,
+        smtpUser: process.env.SMTP_USER,
+        smtpPass: process.env.SMTP_PASS,
+
+        public: {
+            siteUrl: process.env.PUBLIC_SITE_URL || 'http://localhost:3000',
+            apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000'
+        }
     },
 
     vite: {
         css: {
             preprocessorOptions: {
                 scss: {
-                    // เรียกใช้ Variable ทั่วโปรเจกต์
                     additionalData: '@use "~/assets/scss/_variables.scss" as *;'
                 }
             }
@@ -102,21 +95,12 @@ export default defineNuxtConfig({
         client: { key: process.env.STRIPE_PUBLISHABLE_KEY }
     },
 
-    runtimeConfig: {
-        public: {
-            siteUrl: process.env.PUBLIC_SITE_URL,
-            apiBase: process.env.NUXT_PUBLIC_API_BASE
-        }
-    },
-
     routeRules: {
         '/api/**': {
             cors: true,
             headers: {
-                'Access-Control-Allow-Origin': '*', // ปรับเป็น Site URL เมื่อขึ้น Production
+                'Access-Control-Allow-Origin': process.env.PUBLIC_SITE_URL || '*',
                 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-                'Access-Control-Allow-Credentials': 'true',
             },
         },
     },

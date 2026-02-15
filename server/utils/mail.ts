@@ -22,7 +22,7 @@ export const sendConfirmationEmail = async (data: {
   })
 
   // ดึง URL ของหน้า My Tickets จาก .env (PUBLIC_SITE_URL ตามในรูป)
-  const siteUrl = process.env.PUBLIC_SITE_URL || 'http://localhost:3000'
+  const siteUrl = process.env.PUBLIC_SITE_URL
   const myTicketsUrl = `${siteUrl}/my-tickets`
 
   // 2. ออกแบบ HTML Email (Theme: Yi Peng Lanna - Gold & Night)
