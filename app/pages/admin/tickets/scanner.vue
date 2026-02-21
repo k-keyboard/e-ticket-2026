@@ -12,6 +12,12 @@ import {
     NumberOutlined,
     ArrowRightOutlined,
     UserOutlined,
+    CheckOutlined,
+    MailOutlined,
+    CalendarOutlined,
+    ScheduleOutlined,
+    CheckCircleFilled,
+    CloseCircleFilled,
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
@@ -19,29 +25,59 @@ import dayjs from 'dayjs'
 definePageMeta({ layout: false })
 
 // --- State Management ---
-const scanMode = ref(null) // 'camera-back', 'camera-front', 'external-scanner', 'passcode'
+const scanMode = ref(null)
 const scannedTicket = ref(null)
 const isModalVisible = ref(false)
 const confirmLoading = ref(false)
 const paused = ref(false)
-const cameraLoading = ref(true)
+const cameraLoading = ref(false) // เริ่มต้นเป็น false แล้วค่อยเปิดตอนเลือกโหมด
 
 const externalInput = ref('')
-const passcodeField = ref('') // สำหรับโหมดกรอกรหัส Manual
+const passcodeField = ref('')
 const inputRef = ref(null)
 
 // --- Camera Logic ---
 const constraints = computed(() => ({
-    video: { facingMode: scanMode.value === 'camera-front' ? 'user' : 'environment' },
+    video: {
+        facingMode: scanMode.value === 'camera-front' ? 'user' : 'environment',
+    },
 }))
 
 const selectMode = (mode) => {
     scanMode.value = mode
-    cameraLoading.value = true
+    if (mode.startsWith('camera')) {
+        cameraLoading.value = true // เปิด Loading เมื่อเลือกโหมดกล้อง
+    }
     passcodeField.value = ''
     if (mode === 'external-scanner' || mode === 'passcode') {
         nextTick(() => inputRef.value?.focus())
     }
+}
+
+// --- Error Handler (แก้ปัญหากล้องค้างแล้วไม่รู้สาเหตุ) ---
+const onCameraError = (error) => {
+    cameraLoading.value = false
+    paused.value = false
+
+    let errorMsg = 'เกิดข้อผิดพลาดในการเปิดกล้อง'
+    if (error.name === 'NotAllowedError') {
+        errorMsg = 'กรุณาอนุญาตให้เข้าถึงกล้อง (Permission Denied)'
+    } else if (error.name === 'NotFoundError') {
+        errorMsg = 'ไม่พบอุปกรณ์กล้องบนเครื่องนี้'
+    } else if (error.name === 'NotSupportedError') {
+        errorMsg = 'ต้องใช้งานผ่าน HTTPS เท่านั้น'
+    } else if (error.name === 'NotReadableError') {
+        errorMsg = 'กล้องถูกใช้งานโดยแอปอื่นอยู่'
+    }
+
+    message.error(errorMsg)
+    console.error('[Camera Error]:', error)
+}
+
+// เมื่อกล้องพร้อมทำงาน
+const onCameraReady = () => {
+    cameraLoading.value = false
+    console.log('Camera is ready')
 }
 
 // --- Scan Logic ---
@@ -56,7 +92,6 @@ const processScan = async (code) => {
         })
         scannedTicket.value = data.ticket
         isModalVisible.value = true
-        console.log(data);
     } catch (err) {
         message.error(err.data?.message || 'ไม่พบข้อมูลตั๋ว หรือรหัสไม่ถูกต้อง')
         paused.value = false
@@ -74,7 +109,10 @@ const handlePasscodeSubmit = () => {
 }
 
 const onDetect = (detectedCodes) => {
-    processScan(detectedCodes[0]?.rawValue)
+    // detectedCodes เป็น array ในเวอร์ชันใหม่
+    if (detectedCodes && detectedCodes.length > 0) {
+        processScan(detectedCodes[0].rawValue)
+    }
 }
 
 const handleConfirmUse = async () => {
@@ -109,16 +147,16 @@ const resetScanner = () => {
         <div class="scanner-nav">
             <div class="brand">
                 <QrcodeOutlined v-if="!scanMode" />
-                <span v-else
-                    >โหมด:
+                <span v-else>
+                    โหมด:
                     {{
                         scanMode === 'external-scanner'
                             ? 'เครื่องสแกน'
                             : scanMode === 'passcode'
                             ? 'กรอกรหัส'
                             : 'กล้องมือถือ'
-                    }}</span
-                >
+                    }}
+                </span>
             </div>
             <div class="nav-right">
                 <a-button v-if="scanMode" type="text" class="switch-btn" @click="scanMode = null">
@@ -165,10 +203,18 @@ const resetScanner = () => {
         </div>
 
         <div v-else-if="scanMode.startsWith('camera')" class="camera-box">
-            <qrcode-stream :constraints="constraints" :paused="paused" @detect="onDetect" @init="cameraLoading = false">
+            <qrcode-stream
+                :constraints="constraints"
+                :paused="paused"
+                @detect="onDetect"
+                @camera-on="onCameraReady"
+                @error="onCameraError"
+            >
                 <div v-if="cameraLoading" class="camera-loading-overlay">
                     <LoadingOutlined spin style="font-size: 40px; color: #c5a059" />
+                    <p style="margin-top: 10px; color: #c5a059">กำลังเตรียมกล้อง...</p>
                 </div>
+
                 <div class="scan-ui" v-if="!cameraLoading">
                     <div class="target-box"><div class="laser-line"></div></div>
                 </div>
@@ -235,7 +281,11 @@ const resetScanner = () => {
                         </div>
                         <div class="detail-item">
                             <label><CalendarOutlined /> วันที่สแกน</label>
-                            <span>{{ dayjs(scannedTicket.scanned_at).format('DD MMM YYYY HH:mm') || 'ยังไม่มีข้อมูล' }}</span>
+                            <span>{{
+                                scannedTicket.scanned_at
+                                    ? dayjs(scannedTicket.scanned_at).format('DD MMM YYYY HH:mm')
+                                    : 'ยังไม่มีข้อมูล'
+                            }}</span>
                         </div>
                         <div class="detail-item">
                             <label><ScheduleOutlined /> ชื่อกิจกรรม</label>

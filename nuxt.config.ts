@@ -60,6 +60,7 @@ export default defineNuxtConfig({
             navigateFallbackDenylist: [/^\/api/], // ไม่ต้อง fallback สำหรับ API
             globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
             cleanupOutdatedCaches: true,
+            maximumFileSizeToCacheInBytes: 4194304,
         },
         devOptions: {
             enabled: true, // ปิดไว้ตามเดิมเพื่อ Debug หน้าเว็บหลักให้ผ่านก่อน
