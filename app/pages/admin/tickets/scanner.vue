@@ -2,7 +2,6 @@
 import { QrcodeStream } from 'vue-qrcode-reader'
 import {
     CloseOutlined,
-    CheckCircleOutlined,
     LoadingOutlined,
     QrcodeOutlined,
     CameraOutlined,
@@ -11,15 +10,10 @@ import {
     NumberOutlined,
     ArrowRightOutlined,
     UserOutlined,
-    CheckOutlined,
-    MailOutlined,
-    CalendarOutlined,
-    ScheduleOutlined,
     CheckCircleFilled,
     CloseCircleFilled,
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import dayjs from 'dayjs'
 
 definePageMeta({ layout: false })
 useHead({ title: 'สแกนตรวจตั๋ว | Lanna Admin' })
@@ -36,18 +30,23 @@ const passcodeField = ref('')
 const externalInput = ref('')
 const inputRef = ref(null)
 
-// --- Camera Logic ---
-const constraints = computed(() => {
-    if (scanMode.value === 'camera-front') return { video: { facingMode: 'user' } }
-    return { video: { facingMode: { exact: 'environment' } } }
-})
+// --- Camera Logic (Standard v5) ---
+const selectedConstraints = ref({ facingMode: 'environment' })
 
 const selectMode = (mode) => {
     scanMode.value = mode
-    if (mode?.startsWith('camera')) cameraLoading.value = true
-    // ล้างค่าเก่าทิ้งเมื่อสลับโหมด
+    if (mode === 'camera-back') {
+        selectedConstraints.value = { facingMode: 'environment' }
+        cameraLoading.value = true
+    } else if (mode === 'camera-front') {
+        selectedConstraints.value = { facingMode: 'user' }
+        cameraLoading.value = true
+    }
+
+    // Reset inputs
     passcodeField.value = ''
     externalInput.value = ''
+
     if (mode === 'passcode' || mode === 'external-scanner') {
         nextTick(() => inputRef.value?.focus())
     }
@@ -59,6 +58,7 @@ const exitCamera = () => {
     paused.value = false
 }
 
+// แก้ไขฟังก์ชันปิด Modal ให้จบในที่เดียว ลดความเสี่ยง Syntax Error ใน Template
 const closeModal = () => {
     isModalVisible.value = false
     paused.value = false
@@ -68,18 +68,23 @@ const closeModal = () => {
 const onCameraReady = () => {
     cameraLoading.value = false
 }
-const onCameraError = (error) => {
-    cameraLoading.value = false
-    if (error.name === 'OverconstrainedError') {
-        message.warning('ไม่พบกล้องหลัง กำลังลองกล้องหน้า...')
-        scanMode.value = 'camera-front'
-    } else {
-        message.error('ไม่สามารถเปิดกล้องได้: ' + error.name)
+
+const onDetect = (detectedCodes) => {
+    if (detectedCodes && detectedCodes.length > 0) {
+        processScan(detectedCodes[0].rawValue)
     }
 }
 
-const onDetect = (detectedCodes) => {
-    if (detectedCodes?.length > 0) processScan(detectedCodes[0].rawValue)
+const onError = (err) => {
+    cameraLoading.value = false
+    if (err.name === 'NotAllowedError') {
+        message.error('กรุณาอนุญาตให้เข้าถึงกล้อง')
+    } else if (err.name === 'OverconstrainedError') {
+        // ถ้าเรียกกล้องหลังไม่ได้ ให้สลับไปตัวที่ใกล้เคียงที่สุด
+        selectedConstraints.value = { facingMode: 'user' }
+    } else {
+        message.error('กล้องมีปัญหา: ' + err.message)
+    }
 }
 
 const processScan = async (code) => {
@@ -95,9 +100,6 @@ const processScan = async (code) => {
     } catch (err) {
         message.error(err.data?.message || 'ไม่พบข้อมูลตั๋ว')
         paused.value = false
-        // ถ้าเป็นโหมดพิมพ์ ให้ล้างค่าเพื่อให้พิมพ์ใหม่ได้ง่าย
-        passcodeField.value = ''
-        externalInput.value = ''
     }
 }
 
@@ -109,8 +111,7 @@ const handleConfirmUse = async () => {
             body: { ticket_code: scannedTicket.value.ticket_code, action: 'confirm' },
         })
         message.success('เช็คอินสำเร็จ!')
-        isModalVisible.value = false
-        paused.value = false
+        closeModal()
     } catch (err) {
         message.error(err.data?.message || 'เกิดข้อผิดพลาด')
     } finally {
@@ -129,13 +130,11 @@ const handleConfirmUse = async () => {
                     สลับโหมด
                 </a-button>
             </div>
-
             <div class="nav-center">
                 <span class="mode-title" v-if="scanMode">
                     {{ scanMode.startsWith('camera') ? 'กำลังสแกน...' : 'โหมดป้อนข้อมูล' }}
                 </span>
             </div>
-
             <div class="nav-right">
                 <button class="close-app-btn" @click="navigateTo('/admin')">
                     <CloseOutlined />
@@ -168,17 +167,16 @@ const handleConfirmUse = async () => {
             <div v-else-if="scanMode.startsWith('camera')" class="camera-viewport">
                 <qrcode-stream
                     :key="scanMode"
-                    :constraints="constraints"
+                    :constraints="selectedConstraints"
                     :paused="paused"
                     @detect="onDetect"
                     @camera-on="onCameraReady"
-                    @error="onCameraError"
+                    @error="onError"
                 >
                     <div v-if="cameraLoading" class="camera-overlay loading">
                         <LoadingOutlined spin />
                         <p>กำลังเชื่อมต่อกล้อง...</p>
                     </div>
-
                     <div v-if="!cameraLoading" class="camera-overlay scanner-ui">
                         <div class="focus-box">
                             <div class="laser" />
@@ -198,13 +196,12 @@ const handleConfirmUse = async () => {
                         <component :is="scanMode === 'passcode' ? NumberOutlined : BarcodeOutlined" />
                     </div>
                     <h2>{{ scanMode === 'passcode' ? 'กรอกรหัสตั๋ว' : 'พร้อมรับสัญญาณสแกน' }}</h2>
-
                     <div class="form-group">
                         <input
                             v-if="scanMode === 'passcode'"
                             ref="inputRef"
                             v-model="passcodeField"
-                            placeholder="ใส่รหัส 8-10 หลัก"
+                            placeholder="ใส่รหัสตั๋ว"
                             class="custom-input"
                             @keyup.enter="processScan(passcodeField)"
                         />
@@ -212,11 +209,10 @@ const handleConfirmUse = async () => {
                             v-else
                             ref="inputRef"
                             v-model="externalInput"
-                            placeholder="รอข้อมูลจากเครื่องสแกน..."
+                            placeholder="รอสัญญาณจากเครื่องสแกน..."
                             class="custom-input"
                             @keyup.enter="processScan(externalInput)"
                         />
-
                         <button
                             class="go-btn"
                             @click="processScan(scanMode === 'passcode' ? passcodeField : externalInput)"
@@ -264,7 +260,7 @@ const handleConfirmUse = async () => {
 </template>
 
 <style scoped lang="scss">
-/* SCSS ทั้งหมดคงเดิมเหมือนโค้ดก่อนหน้าครับ */
+/* สไตล์คงเดิม เพื่อความสวยงามของ UI */
 .scanner-container {
     height: 100vh;
     height: 100dvh;
@@ -381,6 +377,7 @@ const handleConfirmUse = async () => {
 .camera-viewport {
     height: 100%;
     width: 100%;
+    position: relative;
     .camera-overlay {
         position: absolute;
         inset: 0;

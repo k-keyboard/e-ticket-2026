@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const config = useRuntimeConfig()
 
-    const siteUrl = config.public.siteUrl
+    const siteUrl = config.public.PUBLIC_SITE_URL
 
     try {
         const session = await stripe.checkout.sessions.create({

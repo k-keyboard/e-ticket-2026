@@ -250,7 +250,49 @@ const columns = [
             </a-list>
         </div>
 
-        <a-modal v-model:open="isStockModalOpen" :closable="false" :footer="null" :width="400" centered> </a-modal>
+        <a-modal v-model:open="isStockModalOpen" :closable="false" :footer="null" :width="400" centered>
+            <div v-if="selectedTicket" class="stock-modal-content" style="padding: 20px; text-align: center">
+                <a-typography-title :level="4">ปรับปรุงสต็อก</a-typography-title>
+                <a-typography-text type="secondary">{{ selectedTicket.name }}</a-typography-text>
+
+                <div style="margin: 30px 0; display: flex; align-items: center; justify-content: center; gap: 20px">
+                    <a-button shape="circle" size="large" @click="stockAdjustment--">
+                        <template #icon><MinusOutlined /></template>
+                    </a-button>
+
+                    <div style="text-align: center">
+                        <div style="font-size: 12px; color: #8c8c8c">จำนวนสต็อกที่จะเป็น</div>
+                        <div
+                            style="font-size: 32px; font-weight: bold"
+                            :class="finalStock <= 5 ? 'text-danger' : 'text-success'"
+                        >
+                            {{ finalStock }}
+                        </div>
+                        <div v-if="stockAdjustment !== 0" style="font-size: 14px; color: #d4af37">
+                            ({{ stockAdjustment > 0 ? '+' : '' }}{{ stockAdjustment }})
+                        </div>
+                    </div>
+
+                    <a-button shape="circle" size="large" @click="stockAdjustment++">
+                        <template #icon><PlusOutlined /></template>
+                    </a-button>
+                </div>
+
+                <a-space direction="vertical" style="width: 100%" size="middle">
+                    <a-button
+                        type="primary"
+                        block
+                        size="large"
+                        :loading="stockLoading"
+                        @click="handleSaveStock"
+                        style="background: #001529"
+                    >
+                        ยืนยันการเปลี่ยนสต็อก
+                    </a-button>
+                    <a-button block @click="isStockModalOpen = false">ยกเลิก</a-button>
+                </a-space>
+            </div>
+        </a-modal>
     </div>
 </template>
 
