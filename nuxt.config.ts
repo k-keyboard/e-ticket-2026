@@ -16,7 +16,9 @@ export default defineNuxtConfig({
             ],
             link: [
                 { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-                { rel: 'apple-touch-icon', href: '/pwa-192x192.png' }
+                { rel: 'apple-touch-icon', href: '/pwa-192x192.png' },
+                // บังคับเรียก manifest ตรงๆ เพื่อความไวในการตรวจจับของเบราว์เซอร์
+                { rel: 'manifest', href: '/manifest.webmanifest' }
             ]
         }
     },
@@ -36,38 +38,50 @@ export default defineNuxtConfig({
         'pinia-plugin-persistedstate/nuxt',
         '@unlok-co/nuxt-stripe',
         'nuxt-tiptap-editor',
-        '@vite-pwa/nuxt',
+        [
+            '@vite-pwa/nuxt',
+            {
+                registerType: 'autoUpdate',
+                devOptions: {
+                    enabled: true,
+                    type: 'module',
+                },
+                manifest: {
+                    id: '/',
+                    name: 'Yi Peng Lanna Ticket',
+                    short_name: 'YiPeng',
+                    description: 'The Golden Passage to Yi Peng Festival',
+                    start_url: '/',
+                    scope: '/',
+                    display: 'standalone',
+                    theme_color: '#020617',
+                    background_color: '#020617',
+                    icons: [
+                        {
+                            src: '/pwa-192x192.png',
+                            sizes: '192x192',
+                            type: 'image/png',
+                            purpose: 'any' // ช่วยให้ Chrome ยอมรับการติดตั้งง่ายขึ้น
+                        },
+                        {
+                            src: '/pwa-512x512.png',
+                            sizes: '512x512',
+                            type: 'image/png',
+                            purpose: 'maskable' // สำหรับ Adaptive Icons
+                        },
+                    ],
+                },
+                workbox: {
+                    navigateFallback: '/',
+                    // แก้ไข Warning: สแกนไฟล์เฉพาะตอน Production เท่านั้น
+                    globPatterns: process.env.NODE_ENV === 'production'
+                        ? ['**/*.{js,css,html,png,svg,ico}']
+                        : [],
+                    cleanupOutdatedCaches: true
+                }
+            }
+        ],
     ],
-
-    pwa: {
-        registerType: 'autoUpdate',
-        manifest: {
-            name: 'Yi Peng Lanna Ticket',
-            short_name: 'YiPeng',
-            description: 'The Golden Passage to Yi Peng Festival',
-            theme_color: '#020617',
-            background_color: '#020617',
-            display: 'standalone',
-            orientation: 'portrait',
-            start_url: '/',
-            icons: [
-                { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-                { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-            ]
-        },
-        workbox: {
-            navigateFallback: '/',
-            navigateFallbackDenylist: [/^\/api/], // ไม่ต้อง fallback สำหรับ API
-            globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-            cleanupOutdatedCaches: true,
-            maximumFileSizeToCacheInBytes: 4194304,
-        },
-        devOptions: {
-            enabled: true, // ปิดไว้ตามเดิมเพื่อ Debug หน้าเว็บหลักให้ผ่านก่อน
-            type: 'module',
-            suppressWarnings: true
-        }
-    },
 
     runtimeConfig: {
         smtpHost: process.env.SMTP_HOST,
