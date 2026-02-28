@@ -1,6 +1,8 @@
 <script setup>
 import { storeToRefs } from 'pinia'
 import { UserOutlined, LogoutOutlined, AuditOutlined, DownOutlined, HomeOutlined } from '@ant-design/icons-vue'
+import GoogleTranslateSelect from '@google-translate-select/vue3'
+
 
 const authStore = useAuthStore()
 const { isLoggedIn, user } = storeToRefs(authStore)
@@ -11,6 +13,10 @@ const displayName = computed(() => (user.value?.email ? user.value.email.split('
 const handleLogout = () => {
     authStore.clearAuth()
     navigateTo('/login')
+}
+
+const handleGoogleTranslateSelect = (language) => {
+    console.log(language)
 }
 </script>
 
@@ -28,6 +34,27 @@ const handleLogout = () => {
                 </div>
 
                 <div class="user-zone">
+                    <div class="lanna-translate-container">
+                        <GoogleTranslateSelect
+                            default-language-code="en"
+                            trigger="click"
+                            :languages="[
+                                { code: 'en', name: 'English' },
+                                { code: 'th', name: 'ภาษาไทย' },
+                                { code: 'zh-CN', name: '简体中文' },
+                                { code: 'ja', name: '日本語' },
+                                { code: 'ko', name: '한국어' },
+                            ]"
+                        >
+                            <template #trigger="{ selectedLanguage }">
+                                <div class="custom-vgt-trigger">
+                                    <GlobalOutlined class="gold-icon" />
+                                    <span class="lang-label">{{ selectedLanguage?.name || 'Language' }}</span>
+                                    <DownOutlined class="arrow-icon" />
+                                </div>
+                            </template>
+                        </GoogleTranslateSelect>
+                    </div>
                     <template v-if="isLoggedIn">
                         <a-popover
                             placement="bottomRight"
@@ -95,9 +122,9 @@ const handleLogout = () => {
 </template>
 
 <style lang="scss" scoped>
-@use 'sass:color'; // สำคัญมากสำหรับการใช้ color.adjust
+@use 'sass:color'; 
 
-$gold: #d4af37;
+$color-gold: #d4af37;
 $night: #020617;
 
 .main-layout {
@@ -113,7 +140,7 @@ $night: #020617;
     line-height: 70px;
     background: rgba(2, 6, 23, 0.8);
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba($gold, 0.2);
+    border-bottom: 1px solid rgba($color-gold, 0.2);
     padding: 0 16px;
     @media (min-width: 768px) {
         height: 80px;
@@ -138,7 +165,7 @@ $night: #020617;
         .small-brand {
             font-size: 0.6rem;
             letter-spacing: 3px;
-            color: $gold;
+            color: $color-gold;
             font-weight: 800;
         }
         .main-brand {
@@ -146,7 +173,7 @@ $night: #020617;
             color: #fff;
             font-weight: 700;
             .gold-accent {
-                color: $gold;
+                color: $color-gold;
             }
         }
         @media (min-width: 768px) {
@@ -162,6 +189,23 @@ $night: #020617;
 }
 
 .user-zone {
+    display: flex;
+    gap: 8px;
+    height: 32px;
+    & :deep(.language-selector) {
+        height: 70px !important;
+        & .language-dropdown {
+            height: 32px;
+            padding: 0 16px !important;
+            border-radius: 8px;
+            & .selected-language {
+                height: 32px;
+            }
+            & .language-options > li {
+                line-height: normal !important;
+            }
+        }
+    }
     .user-trigger {
         display: flex;
         align-items: center;
@@ -170,14 +214,14 @@ $night: #020617;
         padding: 4px 4px 4px 12px;
         border-radius: 50px;
         background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba($gold, 0.2);
+        border: 1px solid rgba($color-gold, 0.2);
         transition: all 0.3s ease;
         &:hover {
-            background: rgba($gold, 0.15);
-            border-color: $gold;
+            background: rgba($color-gold, 0.15);
+            border-color: $color-gold;
         }
         .user-avatar {
-            background-color: $gold;
+            background-color: $color-gold;
             color: #000;
             font-weight: bold;
         }
@@ -199,7 +243,7 @@ $night: #020617;
             }
         }
         .icon-arrow {
-            color: $gold;
+            color: $color-gold;
             font-size: 0.7rem;
             margin-right: 8px;
             @media (max-width: 767px) {
@@ -208,14 +252,14 @@ $night: #020617;
         }
     }
     .login-btn {
-        background: $gold;
+        background: $color-gold;
         border: none;
         color: #000;
         font-weight: bold;
         border-radius: 50px;
         &:hover {
             background: #fff;
-            color: $gold;
+            color: $color-gold;
         }
     }
 }
@@ -234,11 +278,11 @@ $night: #020617;
     .footer-line {
         width: 40px;
         height: 2px;
-        background: $gold;
+        background: $color-gold;
         margin: 0 auto 20px;
     }
     .footer-text {
-        color: $gold;
+        color: $color-gold;
         letter-spacing: 2px;
         font-size: 0.8rem;
         margin-bottom: 8px;
@@ -251,11 +295,9 @@ $night: #020617;
 </style>
 
 <style lang="scss">
-/* ปรับปรุง Global Popover สำหรับ Dark Theme */
 .user-popover-wrapper {
     padding-top: 12px;
 
-    // ล้างค่าเดิมของ Ant Design
     .ant-popover-inner {
         background-color: transparent !important;
         padding: 0 !important;
@@ -268,7 +310,7 @@ $night: #020617;
 
     .popover-inner {
         width: 260px;
-        background: #0f172a; // Slate 900
+        background: #0f172a;
         border-radius: 16px;
         border: 1px solid rgba(212, 175, 55, 0.3);
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
@@ -384,7 +426,6 @@ $night: #020617;
     }
 }
 
-/* ปรับแก้ Responsive สำหรับมือถือ */
 @media (max-width: 576px) {
     .user-popover-wrapper {
         width: calc(100vw - 32px) !important;
@@ -395,6 +436,17 @@ $night: #020617;
             width: 100%;
             max-width: none;
         }
+    }
+}
+
+.lanna-translate-container {
+    background: $slate;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    & .google-translate-select-dropdown__activator {
+        line-height: normal;
+        color: #fff;
     }
 }
 </style>
