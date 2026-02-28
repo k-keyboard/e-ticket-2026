@@ -191,7 +191,7 @@ $night: #020617;
 .user-zone {
     display: flex;
     gap: 8px;
-    height: 32px;
+    // height: 32px;
     & :deep(.language-selector) {
         height: 70px !important;
         & .language-dropdown {
@@ -211,7 +211,7 @@ $night: #020617;
         align-items: center;
         gap: 10px;
         cursor: pointer;
-        padding: 4px 4px 4px 12px;
+        padding: 4px 4px 4px 4px;
         border-radius: 50px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba($color-gold, 0.2);

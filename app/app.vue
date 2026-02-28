@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import {
     CloseOutlined,
     ExportOutlined,
@@ -24,7 +24,7 @@ const showCookieConsent = ref(false)
 const isPrivacyVisible = ref(false)
 const isIOS = ref(false)
 const isMacSafari = ref(false)
-const deferredPrompt = ref<any>(null)
+const deferredPrompt = ref(null)
 
 // --- 4. Logic Functions ---
 const acceptCookies = () => {
@@ -73,7 +73,7 @@ onMounted(() => {
         }
 
         // PWA logic
-        isIOS.value = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream
+        isIOS.value = /iPad|iPhone|iPod/.test(ua) && !(window).MSStream
         isMacSafari.value =
             /Safari/.test(ua) && /Apple Computer/.test(navigator.vendor) && !/Chrome/.test(ua) && !isIOS.value
 

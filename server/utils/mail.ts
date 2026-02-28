@@ -8,12 +8,12 @@ export const sendConfirmationEmail = async (data: {
 }) => {
   // 1. สร้าง Transporter โดยดึงค่าจาก .env ตามชื่อที่คุณตั้งไว้ในรูปภาพ
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST, // mail.allkey-services.com
-    port: Number(process.env.SMTP_PORT), // 587
-    secure: Number(process.env.SMTP_PORT) === 465, // false สำหรับพอร์ต 587
+    host: process.env.SMTP_HOST, 
+    port: Number(process.env.SMTP_PORT), 
+    secure: Number(process.env.SMTP_PORT) === 465, 
     auth: {
-      user: process.env.SMTP_USER, // e-tickets@allkey-services.com
-      pass: process.env.SMTP_PASS, // e-tickets-smtp-2026
+      user: process.env.SMTP_USER, 
+      pass: process.env.SMTP_PASS, 
     },
     tls: {
       // สำคัญ: ป้องกันปัญหาการปฏิเสธการเชื่อมต่อจาก Mail Server บางแห่ง
