@@ -88,7 +88,7 @@ const formatDate = (dateStr) => {
                             <a-flex vertical>
                                 <a-typography-text strong>{{ record.title }}</a-typography-text>
                                 <a-typography-text type="secondary" style="font-size: 12px">
-                                    /blog/{{ record.slug }}
+                                    /articles/{{ record.id }}
                                 </a-typography-text>
                             </a-flex>
                         </a-space>
@@ -109,7 +109,7 @@ const formatDate = (dateStr) => {
                     <template v-else-if="column.key === 'action'">
                         <a-space>
                             <a-tooltip title="ดูหน้าเว็บจริง">
-                                <a-button size="small" :href="`/blog/${record.slug}`" target="_blank">
+                                <a-button size="small" :href="`/articles/${record.id}`" target="_blank">
                                     <template #icon><EyeOutlined /></template>
                                 </a-button>
                             </a-tooltip>

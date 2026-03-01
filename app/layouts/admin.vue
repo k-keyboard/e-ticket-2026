@@ -12,15 +12,25 @@ import {
     MenuFoldOutlined,
     ProfileOutlined,
     ScanOutlined,
-    VerticalAlignTopOutlined,
     BellOutlined,
     CaretDownOutlined,
+    GlobalOutlined, // เพิ่มสำหรับการแสดงผลไอคอนหน้าเว็บหลัก
 } from '@ant-design/icons-vue'
 import { Grid } from 'ant-design-vue'
+import { storeToRefs } from 'pinia'
 
 const { useBreakpoint } = Grid
 const screens = useBreakpoint()
 const route = useRoute()
+
+// --- ดึงข้อมูลจาก Store ---
+const authStore = useAuthStore()
+const { user } = storeToRefs(authStore)
+
+const getInitials = computed(() => {
+    return user.value?.email ? user.value.email.substring(0, 2).toUpperCase() : 'AD'
+})
+// -----------------------
 
 const collapsed = ref(false)
 const drawerVisible = ref(false)
@@ -34,7 +44,6 @@ const menuItems = [
     { key: '5', icon: ScheduleOutlined, label: 'จัดการกิจกรรม', path: '/admin/events' },
     { key: '6', icon: PictureOutlined, label: 'จัดการแกลอรี่', path: '/admin/gallery' },
     { key: '7', icon: FileTextOutlined, label: 'จัดการบทความ', path: '/admin/articles' },
-    // { key: '8', icon: SettingOutlined, label: 'ตั้งค่าระบบ', path: '/admin/settings' },
 ]
 
 watchEffect(() => {
@@ -50,7 +59,10 @@ const toggleMenu = () => {
     else drawerVisible.value = !drawerVisible.value
 }
 
-const handleLogout = () => navigateTo('/login')
+const handleLogout = () => {
+    authStore.clearAuth() // ล้างข้อมูลการล็อกอินใน Store และ Cookie
+    navigateTo('/login')
+}
 </script>
 
 <template>
@@ -111,7 +123,7 @@ const handleLogout = () => navigateTo('/login')
 
                 <div class="header-right">
                     <div class="action-items" v-if="screens.sm">
-                        <a-tooltip title="การแจ้งเตือน">
+                        <!-- <a-tooltip title="การแจ้งเตือน">
                             <div class="icon-btn">
                                 <a-badge
                                     dot
@@ -120,13 +132,13 @@ const handleLogout = () => navigateTo('/login')
                                     <BellOutlined />
                                 </a-badge>
                             </div>
-                        </a-tooltip>
+                        </a-tooltip> -->
 
-                        <a-tooltip title="ไปที่หน้าเว็บหลัก">
+                        <!-- <a-tooltip title="ไปที่หน้าเว็บหลัก">
                             <div class="icon-btn" @click="navigateTo('/')">
                                 <GlobalOutlined />
                             </div>
-                        </a-tooltip>
+                        </a-tooltip> -->
                     </div>
 
                     <div class="v-divider" v-if="screens.sm"></div>
@@ -134,13 +146,13 @@ const handleLogout = () => navigateTo('/login')
                     <a-dropdown :trigger="['click']" placement="bottomRight">
                         <div class="user-account-box">
                             <div class="avatar-wrapper">
-                                <a-avatar :size="40" class="avatar-gold">AD</a-avatar>
+                                <a-avatar :size="40" class="avatar-gold">{{ getInitials }}</a-avatar>
                                 <div class="online-indicator"></div>
                             </div>
 
                             <div class="user-meta" v-if="screens.sm">
-                                <span class="user-name">Administrator</span>
-                                <span class="user-role">System Staff</span>
+                                <span class="user-name">{{ user?.email || 'Administrator' }}</span>
+                                <span class="user-role">{{ user?.role || 'System Staff' }}</span>
                             </div>
 
                             <CaretDownOutlined class="chevron-icon" v-if="screens.sm" />
@@ -149,10 +161,10 @@ const handleLogout = () => navigateTo('/login')
                         <template #overlay>
                             <a-menu class="user-dropdown-menu">
                                 <div class="dropdown-header" v-if="!screens.sm">
-                                    <strong>Administrator</strong>
-                                    <p>System Staff</p>
+                                    <strong>{{ user?.email }}</strong>
+                                    <p>{{ user?.role }}</p>
                                 </div>
-                                <a-menu-item key="profile">
+                                <!-- <a-menu-item key="profile">
                                     <template #icon><UserOutlined /></template>
                                     โปรไฟล์ส่วนตัว
                                 </a-menu-item>
@@ -160,7 +172,7 @@ const handleLogout = () => navigateTo('/login')
                                     <template #icon><SettingOutlined /></template>
                                     ตั้งค่าบัญชี
                                 </a-menu-item>
-                                <a-menu-divider />
+                                <a-menu-divider /> -->
                                 <a-menu-item key="logout" @click="handleLogout" class="logout-red">
                                     <template #icon><LogoutOutlined /></template>
                                     ออกจากระบบ
@@ -189,6 +201,7 @@ const handleLogout = () => navigateTo('/login')
 </template>
 
 <style lang="scss" scoped>
+/* โค้ด CSS เดิมของคุณทั้งหมด ไม่มีการเปลี่ยนแปลง */
 .admin-shell {
     min-height: 100vh;
     background: #f8fafc;
