@@ -4,7 +4,6 @@ export default defineEventHandler(async (event) => {
     const stripe = await useServerStripe(event)
 
     try {
-        // 1. ดึงรายการสินค้าจาก Stripe (เฉพาะที่ active)
         const stripeProducts = await stripe.products.list({
             expand: ['data.default_price'],
             active: true,
@@ -14,18 +13,21 @@ export default defineEventHandler(async (event) => {
         const stripeIds = stripeProducts.data.map(p => p.id)
 
         if (stripeIds.length > 0) {
-            // 2. Upsert ข้อมูล: ถ้าเจอ ID เดิมให้ Update และเคลียร์ค่า deleted_at เป็น NULL
             for (const product of stripeProducts.data) {
                 const price: any = product.default_price
+                // ดึงรูปภาพแรกจากรายการ images ของ Stripe
+                const imageUrl = product.images.length > 0 ? product.images[0] : null
+
                 await db.query(`
                     INSERT INTO tickets (
                         stripe_product_id, stripe_price_id, name, description, 
-                        price, currency, is_active, deleted_at
+                        image, price, currency, is_active, deleted_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, 'active', NULL)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NULL)
                     ON DUPLICATE KEY UPDATE 
                         name = VALUES(name),
                         description = VALUES(description),
+                        image = VALUES(image),
                         price = VALUES(price),
                         stripe_price_id = VALUES(stripe_price_id),
                         is_active = 'active',
@@ -35,12 +37,12 @@ export default defineEventHandler(async (event) => {
                     price?.id,
                     product.name,
                     product.description,
+                    imageUrl, // บันทึกรูปภาพ
                     (price?.unit_amount / 100) || 0,
                     price?.currency || 'thb'
                 ])
             }
 
-            // 3. Soft Delete: ถ้าใน Stripe ไม่มีแล้ว ให้ตั้งค่า deleted_at และ suspended
             await db.query(`
                 UPDATE tickets 
                 SET is_active = 'suspended', deleted_at = NOW() 

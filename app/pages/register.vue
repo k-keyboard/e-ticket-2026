@@ -1,67 +1,72 @@
 <template>
-    <div class="auth-container">
+    <div class="auth-wrapper">
+        <NuxtLink to="/" class="back-home"> 
+            <ArrowLeftOutlined /> Back to Home 
+        </NuxtLink>
+
         <a-card class="auth-card" :bordered="false">
             <div class="auth-header">
-                <h1 class="brand-title">Register</h1>
-                <p class="auth-subtitle">Enter your email to receive a setup link.</p>
+                <div class="logo-circle">
+                    <span class="logo-text">YP</span>
+                </div>
+                <h1 class="brand-title">JOIN <span class="gold-text">2026</span></h1>
+                <p class="auth-subtitle">Enter your email to receive a setup link</p>
             </div>
 
             <a-form :model="form" layout="vertical" @finish="handleRegister">
-                <!-- <a-form-item label="Account Type" name="role">
-                    <a-select v-model:value="form.role" size="large">
-                        <a-select-option value="traveler">Traveler</a-select-option>
-                        <a-select-option value="staff">Staff Member</a-select-option>
-                        <a-select-option value="owner">Owner</a-select-option>
-                    </a-select>
-                </a-form-item> -->
                 <a-form-item
                     label="Email Address"
                     name="email"
+                    class="custom-item"
                     :rules="[
                         { required: true, message: 'Please input your email!' },
                         { type: 'email', message: 'Please enter a valid email address!' },
                     ]"
                 >
-                    <a-input v-model:value.trim="form.email" placeholder="yourname@domain.com" size="large" />
+                    <a-input v-model:value.trim="form.email" placeholder="yourname@domain.com" size="large">
+                        <template #prefix><MailOutlined class="prefix-icon" /></template>
+                    </a-input>
                 </a-form-item>
 
-                <a-button type="primary" html-type="submit" block size="large" :loading="loading">
-                    Send Invitation Link
+                <a-button type="primary" html-type="submit" block size="large" :loading="loading" class="login-button">
+                    SEND INVITATION LINK
                 </a-button>
 
-                <div class="auth-footer">Already have an account? <NuxtLink to="/login">Sign In</NuxtLink></div>
+                <div class="auth-footer">
+                    Already have an account? <NuxtLink to="/login" class="gold-link">Sign In</NuxtLink>
+                </div>
             </a-form>
         </a-card>
     </div>
 </template>
 
 <script setup>
+import { MailOutlined, ArrowLeftOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
-// ใช้ reactive สำหรับจัดการ Form ข้อมูล (ไม่ต้องใช้ .value)
+// กำหนด Metadata สำหรับ Layout
+definePageMeta({
+    layout: 'blank',
+})
+
 const form = reactive({
     email: '',
     role: 'traveler',
 })
 
 const loading = ref(false)
+const api = useApi()
 
 const handleRegister = async () => {
     loading.value = true
     try {
-        // ส่งข้อมูลไปยัง API invite.post.ts
-        // body: form (ส่งก้อน reactive ไปได้เลยโดยไม่ต้องมี .value)
-        await useApi().fetch('/api/auth/invite', {
+        await api.fetch('/api/auth/invite', {
             method: 'POST',
             body: form,
         })
-
         message.success('Invitation sent! Please check your email inbox.')
-
-        // ล้างค่าอีเมลหลังจากส่งสำเร็จ (Optional)
         form.email = ''
     } catch (err) {
-        // แสดง Error message จาก Backend
         const errorMsg = err.data?.statusMessage || err.message || 'Failed to send email'
         message.error('Error: ' + errorMsg)
     } finally {
@@ -69,3 +74,137 @@ const handleRegister = async () => {
     }
 }
 </script>
+
+<style lang="scss" scoped>
+.auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+    padding: 20px;
+    position: relative;
+}
+
+.back-home {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: 0.3s;
+    &:hover {
+        color: $color-gold;
+    }
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba($color-gold, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 24px;
+    .logo-circle {
+        width: 50px;
+        height: 50px;
+        background: $color-gold;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto 12px;
+        .logo-text {
+            font-weight: 900;
+            color: $color-night;
+        }
+    }
+    .brand-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+        margin: 0;
+        letter-spacing: 2px;
+        .gold-text {
+            color: $color-gold;
+        }
+    }
+    .auth-subtitle {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.85rem;
+        margin-top: 8px;
+    }
+}
+
+.login-button {
+    height: 50px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    border-radius: 10px;
+    background: $color-gold;
+    border: none;
+    color: $color-night;
+    margin-top: 10px;
+    letter-spacing: 1px;
+    &:hover {
+        background: #fff !important;
+        color: $color-gold !important;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba($color-gold, 0.3);
+    }
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 20px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.9rem;
+    .gold-link {
+        color: $color-gold;
+        font-weight: 600;
+        margin-left: 5px;
+    }
+}
+
+/* แก้ไข Selector เพื่อป้องกัน Vite CSS Error */
+:deep(.ant-form-item-label > label) {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+:deep(.ant-input-affix-wrapper) {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px;
+    padding: 10px 15px;
+
+    input {
+        background: transparent !important;
+        color: #fff !important;
+        &::placeholder {
+            color: rgba(255, 255, 255, 0.3) !important;
+        }
+    }
+
+    .prefix-icon {
+        color: $color-gold !important;
+        margin-right: 8px;
+    }
+
+    &:hover {
+        border-color: $color-gold !important;
+    }
+}
+
+/* แยกส่วน Focused ออกมาเพื่อเลี่ยงการใช้ & ต่อท้าย :deep */
+:deep(.ant-input-affix-wrapper-focused) {
+    border-color: $color-gold !important;
+    box-shadow: 0 0 0 2px rgba($color-gold, 0.1) !important;
+}
+</style>

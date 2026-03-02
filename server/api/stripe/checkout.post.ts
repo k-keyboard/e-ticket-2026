@@ -3,9 +3,8 @@ import { useServerStripe } from '#stripe/server'
 export default defineEventHandler(async (event) => {
     const stripe = await useServerStripe(event)
     const body = await readBody(event)
-    const config = useRuntimeConfig()
 
-    const siteUrl = config.public.siteUrl
+    const siteUrl = process.env.PUBLIC_SITE_URL
 
     try {
         const session = await stripe.checkout.sessions.create({

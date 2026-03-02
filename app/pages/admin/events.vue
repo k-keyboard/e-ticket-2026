@@ -1,11 +1,11 @@
 <script setup>
-import { 
-    PlusOutlined, 
-    EditOutlined, 
-    DeleteOutlined, 
+import {
+    PlusOutlined,
+    EditOutlined,
+    DeleteOutlined,
     ClockCircleOutlined,
     CalendarOutlined,
-    SyncOutlined
+    SyncOutlined,
 } from '@ant-design/icons-vue'
 import { message, Modal } from 'ant-design-vue'
 import dayjs from 'dayjs'
@@ -85,7 +85,9 @@ const handleDelete = (id) => {
                 await $fetch(`/api/events/${id}`, { method: 'DELETE' })
                 message.success('Deleted successfully')
                 refresh()
-            } catch (err) { message.error('Delete failed') }
+            } catch (err) {
+                message.error('Delete failed')
+            }
         },
     })
 }
@@ -100,29 +102,31 @@ const columns = [
 </script>
 
 <template>
-    <div style="padding: 24px">
-        <a-flex justify="space-between" align="center" style="margin-bottom: 24px">
-            <div>
-                <a-typography-title :level="2" style="margin: 0">
-                    <CalendarOutlined style="margin-right: 12px; color: #d4af37" /> จัดการกำหนดการ
+    <div class="admin-container">
+        <div class="header-wrapper">
+            <div class="header-content">
+                <a-typography-title :level="2" class="title-text">
+                    <CalendarOutlined class="icon-gold" /> จัดการกำหนดการ
                 </a-typography-title>
-                <a-typography-text type="secondary">แก้ไขกิจกรรมและเวลาแสดงผลในหน้าแรก (เรียงลำดับตามเวลาอัตโนมัติ)</a-typography-text>
+                <a-typography-text type="secondary" class="sub-title">
+                    แก้ไขกิจกรรมและเวลาแสดงผล (เรียงลำดับตามเวลาอัตโนมัติ)
+                </a-typography-text>
             </div>
-            <a-space>
+            <a-space class="header-actions">
                 <a-button @click="refresh" :loading="pending">
                     <template #icon><SyncOutlined /></template>
                 </a-button>
-                <a-button type="primary" size="large" @click="openAddModal" class="gold-btn">
-                    <template #icon><PlusOutlined /></template> เพิ่มกิจกรรมใหม่
+                <a-button type="primary" @click="openAddModal" class="gold-btn">
+                    <template #icon><PlusOutlined /></template> เพิ่มกิจกรรม
                 </a-button>
             </a-space>
-        </a-flex>
+        </div>
 
-        <a-card :bordered="false" class="shadow-sm">
-            <a-table 
-                :columns="columns" 
-                :data-source="events" 
-                :loading="pending" 
+        <a-card :bordered="false" class="shadow-sm desktop-only">
+            <a-table
+                :columns="columns"
+                :data-source="events"
+                :loading="pending"
                 row-key="id"
                 :pagination="{ pageSize: 10, showTotal: (total) => `ทั้งหมด ${total} รายการ` }"
             >
@@ -136,21 +140,46 @@ const columns = [
 
                     <template v-else-if="column.key === 'action'">
                         <a-space>
-                            <a-tooltip title="แก้ไข">
-                                <a-button size="small" @click="openEditModal(record)">
-                                    <template #icon><EditOutlined /></template>
-                                </a-button>
-                            </a-tooltip>
-                            <a-tooltip title="ลบ">
-                                <a-button size="small" danger @click="handleDelete(record.id)">
-                                    <template #icon><DeleteOutlined /></template>
-                                </a-button>
-                            </a-tooltip>
+                            <a-button size="small" @click="openEditModal(record)">
+                                <template #icon><EditOutlined /></template>
+                            </a-button>
+                            <a-button size="small" danger @click="handleDelete(record.id)">
+                                <template #icon><DeleteOutlined /></template>
+                            </a-button>
                         </a-space>
                     </template>
                 </template>
             </a-table>
         </a-card>
+
+        <div class="mobile-only">
+            <a-list :loading="pending" :data-source="events">
+                <template #renderItem="{ item }">
+                    <a-card class="mobile-event-card">
+                        <div class="event-card-header">
+                            <a-tag color="blue" class="time-tag"> <ClockCircleOutlined /> {{ item.event_time }} </a-tag>
+                            <div class="card-actions-mini">
+                                <a-button type="text" size="small" @click="openEditModal(item)">
+                                    <EditOutlined style="color: #1890ff" />
+                                </a-button>
+                                <a-button type="text" size="small" danger @click="handleDelete(item.id)">
+                                    <DeleteOutlined />
+                                </a-button>
+                            </div>
+                        </div>
+
+                        <div class="event-card-body">
+                            <a-typography-text strong class="event-title">
+                                {{ item.title }}
+                            </a-typography-text>
+                            <p class="event-desc" v-if="item.description">
+                                {{ item.description }}
+                            </p>
+                        </div>
+                    </a-card>
+                </template>
+            </a-list>
+        </div>
 
         <a-modal
             v-model:open="isModalOpen"
@@ -159,8 +188,9 @@ const columns = [
             :confirmLoading="submitting"
             destroyOnClose
             centered
+            :width="450"
         >
-            <a-form ref="formRef" :model="formState" layout="vertical" style="margin-top: 20px">
+            <a-form ref="formRef" :model="formState" layout="vertical" class="modal-form">
                 <a-form-item
                     label="เวลาจัดกิจกรรม"
                     name="event_time"
@@ -173,6 +203,7 @@ const columns = [
                         use12-hours
                         placeholder="เลือกเวลา (AM/PM)"
                         style="width: 100%"
+                        size="large"
                     />
                 </a-form-item>
 
@@ -181,15 +212,11 @@ const columns = [
                     name="title"
                     :rules="[{ required: true, message: 'กรุณาระบุชื่อกิจกรรม' }]"
                 >
-                    <a-input v-model:value="formState.title" placeholder="เช่น พิธีเปิดงานโคมล้านนา" />
+                    <a-input v-model:value="formState.title" placeholder="เช่น พิธีเปิดงานโคมล้านนา" size="large" />
                 </a-form-item>
 
                 <a-form-item label="รายละเอียดกิจกรรม" name="description">
-                    <a-textarea
-                        v-model:value="formState.description"
-                        :rows="4"
-                        placeholder="ระบุรายละเอียดคร่าวๆ ของกิจกรรมนี้..."
-                    />
+                    <a-textarea v-model:value="formState.description" :rows="4" placeholder="ระบุรายละเอียดคร่าวๆ..." />
                 </a-form-item>
             </a-form>
         </a-modal>
@@ -197,23 +224,100 @@ const columns = [
 </template>
 
 <style scoped>
+/* Common Layout */
+.admin-container {
+    padding: 24px;
+}
+.header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    gap: 16px;
+}
+.icon-gold {
+    margin-right: 12px;
+    color: #d4af37;
+}
 .shadow-sm {
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     border: 1px solid #f0f0f0;
 }
 
+/* Buttons */
 .gold-btn {
     background-color: #001529;
     border: none;
+    height: 40px;
 }
-
 .gold-btn:hover {
     background-color: #d4af37 !important;
     color: #001529 !important;
 }
 
-:deep(.ant-table-thead > tr > th) {
-    background-color: #fafafa;
-    font-weight: 700;
+/* Responsive Logic */
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .admin-container {
+        padding: 16px;
+    }
+    .header-wrapper {
+        flex-direction: column;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .desktop-only {
+        display: none;
+    }
+    .mobile-only {
+        display: block;
+    }
+    .sub-title {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+}
+
+/* Mobile Card Styles */
+.mobile-event-card {
+    margin-bottom: 12px;
+    border-radius: 12px;
+    border-left: 4px solid #1890ff; /* แถบสีตามเวลา */
+}
+.event-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.time-tag {
+    font-size: 14px;
+    font-weight: bold;
+}
+.event-title {
+    font-size: 16px;
+    display: block;
+    color: #001529;
+}
+.event-desc {
+    margin-top: 4px;
+    color: #8c8c8c;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.card-actions-mini {
+    display: flex;
+    gap: 4px;
+}
+
+/* Modal Form Styles */
+.modal-form {
+    margin-top: 12px;
 }
 </style>

@@ -1,5 +1,5 @@
 // server/api/users/index.ts
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
 export default defineEventHandler(async (event) => {
     const method = event.method

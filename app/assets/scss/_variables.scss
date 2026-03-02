@@ -1,4 +1,6 @@
 // assets/scss/_variables.scss
+@use "sass:color";
+$color-gold-op: #d4af3777;
 $color-gold: #d4af37;
 $color-orange: #ff8c00;
 $color-night-blue: #0f172a;
@@ -9,6 +11,10 @@ $glass-bg: rgba(30, 27, 75, 0.4);
 $color-deep-bg: #020617;
 $color-active: #52c41a;
 $color-night: #001529;
+$color-night-op: #00152977;
+$slate: #1e293b;
+$color-success: #10b981;
+$color-danger: #ef4444;
 
 @mixin glass-effect {
     background: $glass-bg !important;

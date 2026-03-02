@@ -7,6 +7,7 @@ export default defineEventHandler(async (event) => {
     const stripe = await useServerStripe(event)
 
     try {
+        // ดึงข้อมูล Session จาก Stripe
         const session = await stripe.checkout.sessions.retrieve(session_id as string, {
             expand: ['line_items', 'customer']
         })
@@ -15,7 +16,7 @@ export default defineEventHandler(async (event) => {
             throw createError({ statusCode: 402, message: 'Payment not completed' })
         }
 
-        // 1. ตรวจสอบ Idempotency
+        // 1. เช็ค Idempotency (ป้องกันการรันซ้ำ)
         const [existingOrder]: any = await db.query(
             "SELECT id FROM orders WHERE stripe_session_id = ?",
             [session.id]
@@ -24,7 +25,9 @@ export default defineEventHandler(async (event) => {
         let orderId: number
 
         if (existingOrder.length === 0) {
-            // 2. บันทึกลงตาราง orders (อ้างอิงตามภาพ Screenshot ของคุณ)
+            console.log('--- Processing New Order ---')
+            
+            // 2. บันทึก Order ใหม่
             const [orderResult]: any = await db.query(`
                 INSERT INTO orders (
                     stripe_session_id, customer_name, customer_email, 
@@ -32,7 +35,7 @@ export default defineEventHandler(async (event) => {
                 ) VALUES (?, ?, ?, ?, 'paid', 'paid', ?, NOW())
             `, [
                 session.id,
-                session.customer_details?.name || 'Customer',
+                session.customer_details?.name || 'Guest',
                 session.customer_details?.email,
                 (session.amount_total || 0) / 100,
                 session.currency?.toUpperCase() || 'THB'
@@ -40,52 +43,54 @@ export default defineEventHandler(async (event) => {
 
             orderId = orderResult.insertId
 
-            // 3. จัดการรายการตั๋วใน order_tickets
+            // 3. สร้างตั๋วและลดสต็อก
             const lineItems = session.line_items?.data || []
             for (const item of lineItems) {
-                // ค้นหา ticket_id จากตาราง tickets โดยใช้ชื่อสินค้าที่ตรงกัน
                 const [ticketData]: any = await db.query(
                     "SELECT id FROM tickets WHERE name = ? LIMIT 1",
                     [item.description]
                 )
-                
                 const ticketId = ticketData[0]?.id || null
 
-                // วนลูปตามจำนวน quantity เพื่อสร้าง Ticket Code แยกใบ
+                // สร้าง Ticket Code
                 for (let i = 0; i < (item.quantity || 1); i++) {
-                    const randomCode = Math.random().toString(36).substring(2, 10).toUpperCase()
-                    const ticketCode = `LN-${orderId}-${randomCode}`
-
+                    const ticketCode = `YP26-${orderId}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
                     await db.query(`
                         INSERT INTO order_tickets (order_id, ticket_id, ticket_code, is_used) 
                         VALUES (?, ?, ?, 0)
                     `, [orderId, ticketId, ticketCode])
                 }
 
-                // 4. ลดสต็อกตั๋วในตาราง tickets
+                // ลด Stock
                 if (ticketId) {
-                    await db.query(`
-                        UPDATE tickets 
-                        SET stock_quantity = GREATEST(0, stock_quantity - ?) 
-                        WHERE id = ?
-                    `, [item.quantity, ticketId])
+                    await db.query("UPDATE tickets SET stock_quantity = GREATEST(0, stock_quantity - ?) WHERE id = ?", [item.quantity, ticketId])
                 }
             }
 
-            // 5. ส่งอีเมลยืนยัน (เรียกใช้ helper เดิม)
-            await sendConfirmationEmail({
-                email: session.customer_details?.email as string,
-                orderId: orderId,
-                customerName: session.customer_details?.name || 'Customer',
-                items: lineItems
-            })
+            // 4. ส่งอีเมลยืนยัน (เรียกเพียงครั้งเดียว)
+            try {
+                console.log('Attempting to send email to:', session.customer_details?.email)
+                
+                await sendConfirmationEmail({
+                    email: session.customer_details?.email as string,
+                    orderId: orderId,
+                    customerName: session.customer_details?.name || 'Customer',
+                    items: lineItems
+                })
+
+                console.log('✅ Email sent successfully!')
+            } catch (mailError: any) {
+                // เก็บ Log กรณีเมลไม่ไป แต่ไม่ให้ Error หน้าเว็บ (ลูกค้าจะได้เห็นหน้า Success)
+                console.error('❌ Mail Transport Error:', mailError.message)
+            }
 
         } else {
+            console.log('ℹ️ Order already exists. Skipping database and email logic.')
             orderId = existingOrder[0].id
         }
 
-        return {
-            success: true,
+        return { 
+            success: true, 
             order_id: orderId,
             customer_name: session.customer_details?.name,
             total: (session.amount_total || 0) / 100
