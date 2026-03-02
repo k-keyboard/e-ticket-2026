@@ -73,11 +73,11 @@ export default defineNuxtConfig({
                 },
                 workbox: {
                     navigateFallback: '/',
-                    // แก้ไข Warning: สแกนไฟล์เฉพาะตอน Production เท่านั้น
                     globPatterns: process.env.NODE_ENV === 'production'
                         ? ['**/*.{js,css,html,png,svg,ico}']
                         : [],
-                    cleanupOutdatedCaches: true
+                    cleanupOutdatedCaches: true,
+                    maximumFileSizeToCacheInBytes: 5242880,
                 }
             }
         ],
